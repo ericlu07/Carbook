@@ -93,7 +93,7 @@ function AddRecordForm() {
         year: year ? parseInt(year) : null,
         color,
         vin,
-        owner_name: ownerName,
+        owner_name: "",
       }),
     });
 
@@ -269,7 +269,7 @@ function AddRecordForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Year
@@ -293,18 +293,6 @@ function AddRecordForm() {
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
                 placeholder="Silver"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Owner
-              </label>
-              <input
-                type="text"
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                placeholder="Name"
                 className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
               />
             </div>

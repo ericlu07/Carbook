@@ -280,14 +280,14 @@ export default function HomePage() {
 
       {/* How it works */}
       <section className="max-w-5xl mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-center mb-12 dark:text-white">How It Works</h2>
+        <h2 className="text-3xl font-bold text-center mb-12 text-black">How It Works</h2>
         <div className="grid md:grid-cols-3 gap-8">
           <div className="text-center p-6">
             <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
               1
             </div>
-            <h3 className="text-xl font-semibold mb-2">Register Your Car</h3>
-            <p className="text-gray-600 dark:text-gray-400">
+            <h3 className="text-xl font-semibold mb-2 text-black">Register Your Car</h3>
+            <p className="text-gray-700">
               Enter your plate number and basic vehicle details to create your
               car&apos;s digital service book.
             </p>
@@ -296,8 +296,8 @@ export default function HomePage() {
             <div className="w-16 h-16 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
               2
             </div>
-            <h3 className="text-xl font-semibold mb-2">Upload Invoices</h3>
-            <p className="text-gray-600 dark:text-gray-400">
+            <h3 className="text-xl font-semibold mb-2 text-black">Upload Invoices</h3>
+            <p className="text-gray-700">
               Got a service invoice? Upload it along with the service details.
               PDF, images — whatever you have.
             </p>
@@ -306,8 +306,8 @@ export default function HomePage() {
             <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
               3
             </div>
-            <h3 className="text-xl font-semibold mb-2">Share With Buyers</h3>
-            <p className="text-gray-600 dark:text-gray-400">
+            <h3 className="text-xl font-semibold mb-2 text-black">Share With Buyers</h3>
+            <p className="text-gray-700">
               When selling, just share the plate number. Buyers can look up the
               full service history instantly.
             </p>
