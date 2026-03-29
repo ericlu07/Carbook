@@ -17,7 +17,7 @@ export default function CarPage() {
   const [copied, setCopied] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingRecord, setEditingRecord] = useState<ServiceRecord | null>(null);
-  const [sharingInvoiceId, setSharingInvoiceId] = useState<string | null>(null);
+  const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -79,45 +79,97 @@ export default function CarPage() {
     }
   };
 
-  const handleShareInvoice = async (recordId: string) => {
-    setSharingInvoiceId(recordId);
+  const handleViewInvoice = async (recordId: string) => {
+    setViewingInvoiceId(recordId);
     try {
       const res = await fetch(`/api/invoice/${recordId}`);
       if (!res.ok) {
-        toast("Could not generate invoice link");
-        setSharingInvoiceId(null);
+        toast("Could not load invoice");
+        setViewingInvoiceId(null);
         return;
       }
       const data = await res.json();
-      // Copy the temporary link to clipboard
-      await navigator.clipboard.writeText(data.url);
-      toast("Invoice link copied! Expires in 24 hours.");
+      window.open(data.url, "_blank");
     } catch {
-      toast("Failed to generate link");
+      toast("Failed to load invoice");
     }
-    setSharingInvoiceId(null);
+    setViewingInvoiceId(null);
   };
 
   if (loading) {
+    const shimmer = "relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_1.5s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/60 dark:before:via-white/10 before:to-transparent";
+
     return (
-      <div className="max-w-4xl mx-auto px-4 py-16 flex flex-col items-center justify-center">
-        {/* Spinning car wheel loader */}
-        <div className="relative mb-6">
-          <div className="w-16 h-16 rounded-full border-4 border-gray-200 dark:border-gray-700"></div>
-          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-blue-600 animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10m10 0h4m-4 0H9m5 0a1 1 0 001 1h2a1 1 0 001-1v-5a1 1 0 00-.3-.7l-4-4A1 1 0 0013.4 6H13" />
-            </svg>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <style>{`@keyframes shimmer { 100% { transform: translateX(100%); } }`}</style>
+
+        {/* Header skeleton */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                {/* Plate badge skeleton with real plate */}
+                <div className="bg-blue-600 text-white px-4 py-2 rounded-lg font-mono font-bold text-2xl tracking-wider">
+                  {decodeURIComponent(plate)}
+                </div>
+                <div className={`h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full ${shimmer}`}></div>
+              </div>
+              <div className={`h-7 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg ${shimmer}`}></div>
+            </div>
+            <div className="flex gap-2">
+              <div className={`h-9 w-28 bg-gray-200 dark:bg-gray-700 rounded-lg ${shimmer}`}></div>
+              <div className={`h-9 w-20 bg-gray-200 dark:bg-gray-700 rounded-lg ${shimmer}`}></div>
+            </div>
+          </div>
+
+          {/* Stats skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i}>
+                <div className={`h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 ${shimmer}`}></div>
+                <div className={`h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded ${shimmer}`}></div>
+              </div>
+            ))}
           </div>
         </div>
-        <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1">
-          Loading service history
-        </p>
-        <p className="text-sm text-gray-400 dark:text-gray-500 font-mono tracking-wider">
-          {decodeURIComponent(plate)}
-        </p>
+
+        {/* Service History heading */}
+        <div className="flex items-center justify-between mb-4">
+          <div className={`h-6 w-36 bg-gray-200 dark:bg-gray-700 rounded ${shimmer}`}></div>
+          <div className={`h-4 w-44 bg-gray-200 dark:bg-gray-700 rounded ${shimmer}`}></div>
+        </div>
+
+        {/* Record skeletons */}
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5"
+              style={{ opacity: 1 - (i - 1) * 0.25 }}
+            >
+              <div className="flex flex-col md:flex-row md:items-start gap-4">
+                {/* Date badge skeleton */}
+                <div className="flex-shrink-0 md:w-20">
+                  <div className={`bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 h-[72px] ${shimmer}`}></div>
+                </div>
+                {/* Content skeleton */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`h-6 w-20 bg-blue-100 dark:bg-blue-900/30 rounded-full ${shimmer}`}></div>
+                    <div className={`h-6 w-16 bg-green-100 dark:bg-green-900/30 rounded-full ${shimmer}`}></div>
+                  </div>
+                  <div className={`h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-3 ${shimmer}`}></div>
+                  <div className="flex gap-4">
+                    <div className={`h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded ${shimmer}`}></div>
+                    <div className={`h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded ${shimmer}`}></div>
+                  </div>
+                </div>
+                {/* Cost skeleton */}
+                <div className={`h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded ${shimmer}`}></div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -394,14 +446,15 @@ export default function CarPage() {
                     )}
                     {record.invoice_path && (
                       <button
-                        onClick={() => handleShareInvoice(record.id)}
-                        disabled={sharingInvoiceId === record.id}
+                        onClick={() => handleViewInvoice(record.id)}
+                        disabled={viewingInvoiceId === record.id}
                         className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition disabled:opacity-50"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        {sharingInvoiceId === record.id ? "Generating..." : "Share Invoice (24hr link)"}
+                        {viewingInvoiceId === record.id ? "Opening..." : "View Invoice"}
                       </button>
                     )}
                   </div>
