@@ -93,6 +93,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white overflow-visible relative z-10">
         <div className="max-w-4xl mx-auto px-4 py-12 sm:py-20 text-center">
+          <p className="text-sm text-blue-200 italic mb-6 tracking-wide">The only <span className="font-semibold text-white">ONE</span> service history <span className="font-semibold text-white">BOOK</span> you will ever need</p>
           <h1 className="text-3xl sm:text-5xl font-bold mb-4">
             Your Car&apos;s Service History,
             <br />

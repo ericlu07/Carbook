@@ -32,7 +32,6 @@ export default function RootLayout({
                 <img src="/favicon.svg" alt="CarBook logo" width={32} height={32} className="w-7 h-7 sm:w-8 sm:h-8 rounded-md" />
                 CarBook
               </a>
-              <p className="hidden md:block text-xs text-gray-400 italic">The only <span className="font-semibold text-gray-600">ONE</span> service history <span className="font-semibold text-gray-600">BOOK</span> you will ever need</p>
               <div className="flex items-center gap-1.5 sm:gap-4">
                 <a
                   href="/"
