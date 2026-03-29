@@ -17,11 +17,9 @@ export default function CarPage() {
   const [records, setRecords] = useState<ServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingRecord, setEditingRecord] = useState<ServiceRecord | null>(null);
-  const [hideCosts, setHideCosts] = useState(false);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -110,30 +108,7 @@ export default function CarPage() {
   const earliestOdometer = [...records].reverse().find((r) => r.odometer)?.odometer;
   const totalKm = latestOdometer && earliestOdometer ? latestOdometer - earliestOdometer : null;
 
-  // Service health: check if there's been a service in the last 6 months
   const lastServiceDate = records.length > 0 ? new Date(records[0].service_date) : null;
-  const monthsSinceService = lastServiceDate
-    ? (Date.now() - lastServiceDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
-    : null;
-
-  let healthStatus = "Unknown";
-  let healthColor = "text-gray-500 dark:text-gray-400";
-  let healthBg = "bg-gray-100 dark:bg-gray-700";
-  if (monthsSinceService !== null) {
-    if (monthsSinceService <= 6) {
-      healthStatus = "Well Maintained";
-      healthColor = "text-green-700 dark:text-green-400";
-      healthBg = "bg-green-100 dark:bg-green-900/30";
-    } else if (monthsSinceService <= 12) {
-      healthStatus = "Service Due Soon";
-      healthColor = "text-yellow-700 dark:text-yellow-400";
-      healthBg = "bg-yellow-100 dark:bg-yellow-900/30";
-    } else {
-      healthStatus = "Overdue for Service";
-      healthColor = "text-red-700 dark:text-red-400";
-      healthBg = "bg-red-100 dark:bg-red-900/30";
-    }
-  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -150,9 +125,6 @@ export default function CarPage() {
                   {car.color}
                 </span>
               )}
-              <span className={`text-sm font-medium px-3 py-1 rounded-full ${healthBg} ${healthColor}`}>
-                {healthStatus}
-              </span>
             </div>
             <h1 className="text-2xl font-bold dark:text-gray-100">
               {car?.year} {car?.make} {car?.model}
@@ -181,55 +153,14 @@ export default function CarPage() {
             >
               {copied ? "Copied!" : "Share"}
             </button>
-            <button
-              onClick={() => setShowQR(!showQR)}
-              className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition text-sm"
-            >
-              QR Code
-            </button>
-            <button
-              onClick={() => window.print()}
-              className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition text-sm"
-            >
-              Print
-            </button>
             <a
               href={`/api/cars/${encodeURIComponent(car?.plate || "")}/export`}
               className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition text-sm"
             >
               Export CSV
             </a>
-            <button
-              onClick={() => setHideCosts(!hideCosts)}
-              className={`border px-4 py-2 rounded-lg font-semibold transition text-sm ${
-                hideCosts
-                  ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                  : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-              }`}
-              title="Hide costs for sharing with buyers"
-            >
-              {hideCosts ? "Show Costs" : "Hide Costs"}
-            </button>
           </div>
         </div>
-
-        {/* QR Code Panel */}
-        {showQR && (
-          <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              Scan to view this car&apos;s service history
-            </p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/api/qr/${encodeURIComponent(car?.plate || "")}`}
-              alt="QR Code"
-              className="w-48 h-48 mx-auto"
-            />
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 font-mono">
-              {typeof window !== "undefined" ? window.location.href : ""}
-            </p>
-          </div>
-        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
@@ -240,7 +171,7 @@ export default function CarPage() {
           <div>
             <p className="text-gray-500 dark:text-gray-400 text-sm">Total Spent</p>
             <p className="text-2xl font-bold dark:text-gray-100">
-              {hideCosts ? "Hidden" : `$${totalCost.toLocaleString("en-NZ", { minimumFractionDigits: 2 })}`}
+              ${totalCost.toLocaleString("en-NZ", { minimumFractionDigits: 2 })}
             </p>
           </div>
           <div>
@@ -311,7 +242,7 @@ export default function CarPage() {
       )}
 
       {/* Cost Breakdown */}
-      {!hideCosts && records.some((r) => r.cost && r.cost > 0) && (
+      {records.some((r) => r.cost && r.cost > 0) && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
           <CostBreakdown records={records} />
         </div>
@@ -384,7 +315,7 @@ export default function CarPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                      {record.cost != null && record.cost > 0 && !hideCosts && (
+                      {record.cost != null && record.cost > 0 && (
                         <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                           ${record.cost.toLocaleString("en-NZ", {
                             minimumFractionDigits: 2,
