@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 import { ServiceRecord } from "@/lib/types";
 
 export async function GET(
@@ -12,9 +12,11 @@ export async function GET(
     .replace(/\s+/g, "");
 
   // Verify car exists
-  const car = db
-    .prepare("SELECT plate FROM cars WHERE plate = ?")
-    .get(cleanPlate) as { plate: string } | undefined;
+  const { data: car } = await supabase
+    .from("cars")
+    .select("plate")
+    .eq("plate", cleanPlate)
+    .single();
 
   if (!car) {
     return NextResponse.json(
@@ -24,11 +26,17 @@ export async function GET(
   }
 
   // Fetch all service records for this plate
-  const records = db
-    .prepare(
-      "SELECT * FROM service_records WHERE plate = ? ORDER BY service_date DESC"
-    )
-    .all(cleanPlate) as ServiceRecord[];
+  const { data: records, error } = await supabase
+    .from("service_records")
+    .select("*")
+    .eq("plate", cleanPlate)
+    .order("service_date", { ascending: false });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const typedRecords = (records || []) as ServiceRecord[];
 
   // Build CSV content
   const headers = [
@@ -50,7 +58,7 @@ export async function GET(
     return str;
   };
 
-  const rows = records.map((r) =>
+  const rows = typedRecords.map((r) =>
     [
       escapeCSV(r.service_date),
       escapeCSV(r.service_type),

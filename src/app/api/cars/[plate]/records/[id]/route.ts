@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 
 export async function DELETE(
   _req: NextRequest,
@@ -9,9 +9,12 @@ export async function DELETE(
   const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
 
   // Verify the record exists and belongs to this plate
-  const record = db
-    .prepare("SELECT id FROM service_records WHERE id = ? AND plate = ?")
-    .get(id, cleanPlate);
+  const { data: record } = await supabase
+    .from("service_records")
+    .select("id")
+    .eq("id", id)
+    .eq("plate", cleanPlate)
+    .single();
 
   if (!record) {
     return NextResponse.json(
@@ -20,10 +23,21 @@ export async function DELETE(
     );
   }
 
-  db.prepare("DELETE FROM service_records WHERE id = ? AND plate = ?").run(id, cleanPlate);
+  const { error: deleteError } = await supabase
+    .from("service_records")
+    .delete()
+    .eq("id", id)
+    .eq("plate", cleanPlate);
+
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
 
   // Update car's updated_at
-  db.prepare("UPDATE cars SET updated_at = datetime('now') WHERE plate = ?").run(cleanPlate);
+  await supabase
+    .from("cars")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("plate", cleanPlate);
 
   return NextResponse.json({ deleted: id });
 }
@@ -34,11 +48,13 @@ export async function PUT(
 ) {
   const { plate, id } = await params;
   const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
-  const body = await req.json();
 
-  const record = db
-    .prepare("SELECT id FROM service_records WHERE id = ? AND plate = ?")
-    .get(id, cleanPlate);
+  const { data: record } = await supabase
+    .from("service_records")
+    .select("id")
+    .eq("id", id)
+    .eq("plate", cleanPlate)
+    .single();
 
   if (!record) {
     return NextResponse.json(
@@ -46,6 +62,8 @@ export async function PUT(
       { status: 404 }
     );
   }
+
+  const body = await req.json();
 
   const {
     service_date,
@@ -59,33 +77,33 @@ export async function PUT(
     notes,
   } = body;
 
-  db.prepare(
-    `UPDATE service_records SET
-      service_date = COALESCE(?, service_date),
-      service_type = COALESCE(?, service_type),
-      description = ?,
-      provider = ?,
-      odometer = ?,
-      cost = ?,
-      invoice_filename = COALESCE(?, invoice_filename),
-      invoice_path = COALESCE(?, invoice_path),
-      notes = ?
-    WHERE id = ? AND plate = ?`
-  ).run(
-    service_date || null,
-    service_type || null,
-    description ?? null,
-    provider ?? null,
-    odometer || null,
-    cost || null,
-    invoice_filename || null,
-    invoice_path || null,
-    notes ?? null,
-    id,
-    cleanPlate
-  );
+  // Build update object, only including fields that were provided
+  // For COALESCE behavior: only update if value is truthy, otherwise keep existing
+  const updateData: Record<string, unknown> = {};
+  if (service_date) updateData.service_date = service_date;
+  if (service_type) updateData.service_type = service_type;
+  if (description !== undefined) updateData.description = description ?? null;
+  if (provider !== undefined) updateData.provider = provider ?? null;
+  if (odometer !== undefined) updateData.odometer = odometer || null;
+  if (cost !== undefined) updateData.cost = cost || null;
+  if (invoice_filename) updateData.invoice_filename = invoice_filename;
+  if (invoice_path) updateData.invoice_path = invoice_path;
+  if (notes !== undefined) updateData.notes = notes ?? null;
 
-  db.prepare("UPDATE cars SET updated_at = datetime('now') WHERE plate = ?").run(cleanPlate);
+  const { error: updateError } = await supabase
+    .from("service_records")
+    .update(updateData)
+    .eq("id", id)
+    .eq("plate", cleanPlate);
+
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  await supabase
+    .from("cars")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("plate", cleanPlate);
 
   return NextResponse.json({ updated: id });
 }

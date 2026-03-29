@@ -34,18 +34,6 @@ export default function RootLayout({
               </a>
               <div className="flex items-center gap-1.5 sm:gap-4">
                 <a
-                  href="/"
-                  className="hidden sm:block text-gray-600 hover:text-blue-600 transition font-medium text-sm sm:text-base"
-                >
-                  Search
-                </a>
-                <a
-                  href="/browse"
-                  className="text-gray-600 hover:text-blue-600 transition font-medium text-sm sm:text-base"
-                >
-                  Browse
-                </a>
-                <a
                   href="/add"
                   className="bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm sm:text-base"
                 >

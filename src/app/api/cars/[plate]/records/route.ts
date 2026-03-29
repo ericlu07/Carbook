@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 import { v4 as uuid } from "uuid";
 
 export async function GET(
@@ -9,13 +9,18 @@ export async function GET(
   const { plate } = await params;
   const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
 
-  const records = db
-    .prepare(
-      "SELECT * FROM service_records WHERE plate = ? ORDER BY service_date DESC, created_at DESC"
-    )
-    .all(cleanPlate);
+  const { data: records, error } = await supabase
+    .from("service_records")
+    .select("*")
+    .eq("plate", cleanPlate)
+    .order("service_date", { ascending: false })
+    .order("created_at", { ascending: false });
 
-  return NextResponse.json({ records });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ records: records || [] });
 }
 
 export async function POST(
@@ -47,32 +52,41 @@ export async function POST(
   }
 
   // Make sure car exists
-  const car = db.prepare("SELECT plate FROM cars WHERE plate = ?").get(cleanPlate);
+  const { data: car } = await supabase
+    .from("cars")
+    .select("plate")
+    .eq("plate", cleanPlate)
+    .single();
+
   if (!car) {
     return NextResponse.json({ error: "Car not found. Register the car first." }, { status: 404 });
   }
 
   const id = uuid();
-  db.prepare(
-    `INSERT INTO service_records (id, plate, service_date, odometer, service_type, description, provider, cost, currency, invoice_filename, invoice_path, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
+  const { error: insertError } = await supabase.from("service_records").insert({
     id,
-    cleanPlate,
+    plate: cleanPlate,
     service_date,
-    odometer || null,
+    odometer: odometer || null,
     service_type,
-    description || null,
-    provider || null,
-    cost || null,
-    currency || "NZD",
-    invoice_filename || null,
-    invoice_path || null,
-    notes || null
-  );
+    description: description || null,
+    provider: provider || null,
+    cost: cost || null,
+    currency: currency || "NZD",
+    invoice_filename: invoice_filename || null,
+    invoice_path: invoice_path || null,
+    notes: notes || null,
+  });
+
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  }
 
   // Update car's updated_at
-  db.prepare("UPDATE cars SET updated_at = datetime('now') WHERE plate = ?").run(cleanPlate);
+  await supabase
+    .from("cars")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("plate", cleanPlate);
 
   return NextResponse.json({ id }, { status: 201 });
 }
@@ -94,9 +108,12 @@ export async function DELETE(
   }
 
   // Verify the record exists and belongs to this plate
-  const record = db
-    .prepare("SELECT id FROM service_records WHERE id = ? AND plate = ?")
-    .get(id, cleanPlate);
+  const { data: record } = await supabase
+    .from("service_records")
+    .select("id")
+    .eq("id", id)
+    .eq("plate", cleanPlate)
+    .single();
 
   if (!record) {
     return NextResponse.json(
@@ -105,10 +122,21 @@ export async function DELETE(
     );
   }
 
-  db.prepare("DELETE FROM service_records WHERE id = ? AND plate = ?").run(id, cleanPlate);
+  const { error: deleteError } = await supabase
+    .from("service_records")
+    .delete()
+    .eq("id", id)
+    .eq("plate", cleanPlate);
+
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
 
   // Update car's updated_at
-  db.prepare("UPDATE cars SET updated_at = datetime('now') WHERE plate = ?").run(cleanPlate);
+  await supabase
+    .from("cars")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("plate", cleanPlate);
 
   return NextResponse.json({ deleted: id });
 }

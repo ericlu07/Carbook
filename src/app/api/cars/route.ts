@@ -1,36 +1,89 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
+import supabase from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q") || "";
+  const all = req.nextUrl.searchParams.get("all") === "1";
 
   if (q) {
-    const cars = db
-      .prepare(
-        `SELECT c.*, COUNT(s.id) as record_count, MAX(s.service_date) as last_service_date
-         FROM cars c
-         LEFT JOIN service_records s ON c.plate = s.plate
-         WHERE c.plate LIKE ? OR c.vin LIKE ?
-         GROUP BY c.plate
-         ORDER BY c.updated_at DESC
-         LIMIT 20`
-      )
-      .all(`%${q}%`, `%${q}%`);
-    return NextResponse.json({ cars });
+    const { data: cars, error } = await supabase
+      .from("cars")
+      .select("*")
+      .or(`plate.ilike.%${q}%,vin.ilike.%${q}%`)
+      .order("updated_at", { ascending: false })
+      .limit(20);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Fetch record counts and last service dates for these cars
+    const plates = (cars || []).map((c) => c.plate);
+    const { data: recordStats } = await supabase
+      .from("service_records")
+      .select("plate, id, service_date")
+      .in("plate", plates.length > 0 ? plates : [""]);
+
+    const statsMap: Record<string, { record_count: number; last_service_date: string | null }> = {};
+    for (const r of recordStats || []) {
+      if (!statsMap[r.plate]) {
+        statsMap[r.plate] = { record_count: 0, last_service_date: null };
+      }
+      statsMap[r.plate].record_count++;
+      if (!statsMap[r.plate].last_service_date || r.service_date > statsMap[r.plate].last_service_date!) {
+        statsMap[r.plate].last_service_date = r.service_date;
+      }
+    }
+
+    const enrichedCars = (cars || []).map((c) => ({
+      ...c,
+      record_count: statsMap[c.plate]?.record_count || 0,
+      last_service_date: statsMap[c.plate]?.last_service_date || null,
+    }));
+
+    return NextResponse.json({ cars: enrichedCars });
   }
 
-  const all = req.nextUrl.searchParams.get("all") === "1";
-  const cars = db
-    .prepare(
-      `SELECT c.*, COUNT(s.id) as record_count, MAX(s.service_date) as last_service_date
-       FROM cars c
-       LEFT JOIN service_records s ON c.plate = s.plate
-       GROUP BY c.plate
-       ORDER BY c.updated_at DESC${all ? "" : " LIMIT 20"}`
-    )
-    .all();
+  let query = supabase
+    .from("cars")
+    .select("*")
+    .order("updated_at", { ascending: false });
 
-  return NextResponse.json({ cars });
+  if (!all) {
+    query = query.limit(20);
+  }
+
+  const { data: cars, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Fetch record counts and last service dates for all returned cars
+  const plates = (cars || []).map((c) => c.plate);
+  const { data: recordStats } = await supabase
+    .from("service_records")
+    .select("plate, id, service_date")
+    .in("plate", plates.length > 0 ? plates : [""]);
+
+  const statsMap: Record<string, { record_count: number; last_service_date: string | null }> = {};
+  for (const r of recordStats || []) {
+    if (!statsMap[r.plate]) {
+      statsMap[r.plate] = { record_count: 0, last_service_date: null };
+    }
+    statsMap[r.plate].record_count++;
+    if (!statsMap[r.plate].last_service_date || r.service_date > statsMap[r.plate].last_service_date!) {
+      statsMap[r.plate].last_service_date = r.service_date;
+    }
+  }
+
+  const enrichedCars = (cars || []).map((c) => ({
+    ...c,
+    record_count: statsMap[c.plate]?.record_count || 0,
+    last_service_date: statsMap[c.plate]?.last_service_date || null,
+  }));
+
+  return NextResponse.json({ cars: enrichedCars });
 }
 
 export async function POST(req: NextRequest) {
@@ -46,18 +99,44 @@ export async function POST(req: NextRequest) {
 
   const cleanPlate = plate.trim().toUpperCase().replace(/\s+/g, "");
 
-  const existing = db.prepare("SELECT plate FROM cars WHERE plate = ?").get(cleanPlate);
+  const { data: existing } = await supabase
+    .from("cars")
+    .select("plate")
+    .eq("plate", cleanPlate)
+    .single();
+
   if (existing) {
     // Update existing car info
-    db.prepare(
-      `UPDATE cars SET make = ?, model = ?, year = ?, color = ?, vin = ?, owner_name = ?, updated_at = datetime('now')
-       WHERE plate = ?`
-    ).run(make, model, year || null, color || null, vin || null, owner_name || null, cleanPlate);
+    const { error } = await supabase
+      .from("cars")
+      .update({
+        make,
+        model,
+        year: year || null,
+        color: color || null,
+        vin: vin || null,
+        owner_name: owner_name || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("plate", cleanPlate);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   } else {
-    db.prepare(
-      `INSERT INTO cars (plate, make, model, year, color, vin, owner_name)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(cleanPlate, make, model, year || null, color || null, vin || null, owner_name || null);
+    const { error } = await supabase.from("cars").insert({
+      plate: cleanPlate,
+      make,
+      model,
+      year: year || null,
+      color: color || null,
+      vin: vin || null,
+      owner_name: owner_name || null,
+    });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ plate: cleanPlate }, { status: 201 });
