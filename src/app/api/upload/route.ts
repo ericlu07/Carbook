@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import supabase from "@/lib/db";
 import { v4 as uuid } from "uuid";
+import path from "path";
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
@@ -16,16 +16,27 @@ export async function POST(req: NextRequest) {
 
   const ext = path.extname(file.name) || ".bin";
   const filename = `${uuid()}${ext}`;
-  const uploadDir = path.join(process.cwd(), "uploads");
 
-  await mkdir(uploadDir, { recursive: true });
+  // Upload to Supabase Storage
+  const { error: uploadError } = await supabase.storage
+    .from("invoices")
+    .upload(filename, buffer, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
 
-  const filepath = path.join(uploadDir, filename);
-  await writeFile(filepath, buffer);
+  if (uploadError) {
+    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  }
+
+  // Get the public URL
+  const { data: urlData } = supabase.storage
+    .from("invoices")
+    .getPublicUrl(filename);
 
   return NextResponse.json({
     filename: file.name,
-    path: `/api/upload/${filename}`,
+    path: urlData.publicUrl,
     size: file.size,
   });
 }

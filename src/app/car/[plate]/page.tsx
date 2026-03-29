@@ -157,7 +157,7 @@ export default function CarPage() {
               href={`/api/cars/${encodeURIComponent(car?.plate || "")}/export`}
               className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition text-sm"
             >
-              Export CSV
+              Download PDF
             </a>
           </div>
         </div>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/db";
 import { ServiceRecord } from "@/lib/types";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export async function GET(
   _req: NextRequest,
@@ -11,21 +13,18 @@ export async function GET(
     .toUpperCase()
     .replace(/\s+/g, "");
 
-  // Verify car exists
+  // Fetch car details
   const { data: car } = await supabase
     .from("cars")
-    .select("plate")
+    .select("*")
     .eq("plate", cleanPlate)
     .single();
 
   if (!car) {
-    return NextResponse.json(
-      { error: "Car not found" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Car not found" }, { status: 404 });
   }
 
-  // Fetch all service records for this plate
+  // Fetch all service records
   const { data: records, error } = await supabase
     .from("service_records")
     .select("*")
@@ -37,46 +36,137 @@ export async function GET(
   }
 
   const typedRecords = (records || []) as ServiceRecord[];
+  const totalCost = typedRecords.reduce((sum, r) => sum + (r.cost || 0), 0);
 
-  // Build CSV content
-  const headers = [
-    "Date",
-    "Service Type",
-    "Description",
-    "Provider",
-    "Odometer (km)",
-    "Cost ($)",
-    "Notes",
-  ];
+  // Create PDF
+  const doc = new jsPDF();
 
-  const escapeCSV = (value: string | number | null | undefined): string => {
-    if (value === null || value === undefined) return "";
-    const str = String(value);
-    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
+  // Header
+  doc.setFontSize(22);
+  doc.setTextColor(37, 99, 235); // blue-600
+  doc.text("CarBook", 14, 20);
 
-  const rows = typedRecords.map((r) =>
-    [
-      escapeCSV(r.service_date),
-      escapeCSV(r.service_type),
-      escapeCSV(r.description),
-      escapeCSV(r.provider),
-      escapeCSV(r.odometer),
-      escapeCSV(r.cost),
-      escapeCSV(r.notes),
-    ].join(",")
+  doc.setFontSize(10);
+  doc.setTextColor(107, 114, 128); // gray-500
+  doc.text("onecarbook.com", 14, 26);
+
+  // Car info section
+  doc.setFontSize(16);
+  doc.setTextColor(17, 24, 39); // gray-900
+  const carTitle = [car.year, car.make, car.model].filter(Boolean).join(" ");
+  doc.text(carTitle || "Unknown Vehicle", 14, 40);
+
+  doc.setFontSize(12);
+  doc.setTextColor(37, 99, 235);
+  doc.text(cleanPlate, 14, 48);
+
+  // Car details
+  doc.setFontSize(10);
+  doc.setTextColor(107, 114, 128);
+  let detailY = 56;
+  if (car.color) {
+    doc.text(`Color: ${car.color}`, 14, detailY);
+    detailY += 6;
+  }
+  if (car.vin) {
+    doc.text(`VIN: ${car.vin}`, 14, detailY);
+    detailY += 6;
+  }
+
+  // Summary stats
+  detailY += 4;
+  doc.setFillColor(243, 244, 246); // gray-100
+  doc.roundedRect(14, detailY, 182, 16, 2, 2, "F");
+  doc.setFontSize(10);
+  doc.setTextColor(55, 65, 81); // gray-700
+  doc.text(`Total Records: ${typedRecords.length}`, 20, detailY + 10);
+  doc.text(
+    `Total Spent: $${totalCost.toLocaleString("en-NZ", { minimumFractionDigits: 2 })}`,
+    80,
+    detailY + 10
   );
+  const latestOdo = typedRecords.find((r) => r.odometer)?.odometer;
+  if (latestOdo) {
+    doc.text(`Latest Odometer: ${latestOdo.toLocaleString()} km`, 140, detailY + 10);
+  }
 
-  const csv = [headers.join(","), ...rows].join("\n");
+  // Service records table
+  const tableStartY = detailY + 24;
+  doc.setFontSize(14);
+  doc.setTextColor(17, 24, 39);
+  doc.text("Service History", 14, tableStartY);
 
-  return new NextResponse(csv, {
+  if (typedRecords.length > 0) {
+    const tableData = typedRecords.map((r) => [
+      r.service_date,
+      r.description || r.service_type || "-",
+      r.provider || "-",
+      r.odometer ? `${r.odometer.toLocaleString()} km` : "-",
+      r.cost != null && r.cost > 0
+        ? `$${r.cost.toLocaleString("en-NZ", { minimumFractionDigits: 2 })}`
+        : "-",
+      r.invoice_filename ? "Yes" : "-",
+    ]);
+
+    autoTable(doc, {
+      startY: tableStartY + 4,
+      head: [["Date", "Description", "Provider", "Odometer", "Cost", "Invoice"]],
+      body: tableData,
+      theme: "striped",
+      headStyles: {
+        fillColor: [37, 99, 235],
+        textColor: 255,
+        fontStyle: "bold",
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [55, 65, 81],
+      },
+      alternateRowStyles: {
+        fillColor: [243, 244, 246],
+      },
+      columnStyles: {
+        0: { cellWidth: 24 },
+        1: { cellWidth: "auto" },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 16 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+  } else {
+    doc.setFontSize(10);
+    doc.setTextColor(156, 163, 175);
+    doc.text("No service records found.", 14, tableStartY + 10);
+  }
+
+  // Footer
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(156, 163, 175);
+    doc.text(
+      `Generated by CarBook (onecarbook.com) on ${new Date().toLocaleDateString("en-NZ")}`,
+      14,
+      doc.internal.pageSize.height - 10
+    );
+    doc.text(
+      `Page ${i} of ${pageCount}`,
+      doc.internal.pageSize.width - 30,
+      doc.internal.pageSize.height - 10
+    );
+  }
+
+  const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
+
+  return new NextResponse(pdfBuffer, {
     status: 200,
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${cleanPlate}-service-history.csv"`,
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${cleanPlate}-service-history.pdf"`,
     },
   });
 }
