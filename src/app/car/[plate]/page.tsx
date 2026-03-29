@@ -21,22 +21,26 @@ export default function CarPage() {
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
-    const carRes = await fetch(`/api/cars/${encodeURIComponent(plate)}`);
+    const encodedPlate = encodeURIComponent(plate);
+    // Fetch car and records in parallel for speed
+    const [carRes, recRes] = await Promise.all([
+      fetch(`/api/cars/${encodedPlate}`),
+      fetch(`/api/cars/${encodedPlate}/records`),
+    ]);
+
     if (!carRes.ok) {
       setNotFound(true);
       setLoading(false);
       return;
     }
-    const carData = await carRes.json();
-    setCar(carData.car);
 
-    const recRes = await fetch(
-      `/api/cars/${encodeURIComponent(plate)}/records`
-    );
-    if (recRes.ok) {
-      const recData = await recRes.json();
-      setRecords(recData.records);
-    }
+    const [carData, recData] = await Promise.all([
+      carRes.json(),
+      recRes.ok ? recRes.json() : { records: [] },
+    ]);
+
+    setCar(carData.car);
+    setRecords(recData.records);
     setLoading(false);
   }, [plate]);
 
@@ -96,11 +100,24 @@ export default function CarPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mx-auto mb-4"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 mx-auto"></div>
+      <div className="max-w-4xl mx-auto px-4 py-16 flex flex-col items-center justify-center">
+        {/* Spinning car wheel loader */}
+        <div className="relative mb-6">
+          <div className="w-16 h-16 rounded-full border-4 border-gray-200 dark:border-gray-700"></div>
+          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-t-blue-600 animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10m10 0h4m-4 0H9m5 0a1 1 0 001 1h2a1 1 0 001-1v-5a1 1 0 00-.3-.7l-4-4A1 1 0 0013.4 6H13" />
+            </svg>
+          </div>
         </div>
+        <p className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-1">
+          Loading service history
+        </p>
+        <p className="text-sm text-gray-400 dark:text-gray-500 font-mono tracking-wider">
+          {decodeURIComponent(plate)}
+        </p>
       </div>
     );
   }
