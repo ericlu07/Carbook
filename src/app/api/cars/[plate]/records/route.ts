@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
+
+async function verifyOwnership(req: NextRequest, cleanPlate: string) {
+  const user = await getAuthUser(req);
+  if (!user) return { error: "Unauthorized", status: 401 };
+
+  const { data: car } = await supabase
+    .from("cars")
+    .select("user_id")
+    .eq("plate", cleanPlate)
+    .single();
+
+  if (car?.user_id && car.user_id !== user.id) {
+    return { error: "Forbidden", status: 403 };
+  }
+  return { user };
+}
 
 export async function GET(
   _req: NextRequest,
@@ -29,8 +46,13 @@ export async function POST(
 ) {
   const { plate } = await params;
   const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
-  const body = await req.json();
 
+  const auth = await verifyOwnership(req, cleanPlate);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const body = await req.json();
   const {
     service_date,
     service_type,
@@ -51,7 +73,6 @@ export async function POST(
     );
   }
 
-  // Make sure car exists
   const { data: car } = await supabase
     .from("cars")
     .select("plate")
@@ -82,7 +103,6 @@ export async function POST(
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  // Update car's updated_at
   await supabase
     .from("cars")
     .update({ updated_at: new Date().toISOString() })
@@ -97,17 +117,19 @@ export async function DELETE(
 ) {
   const { plate } = await params;
   const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
+
+  const auth = await verifyOwnership(req, cleanPlate);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const body = await req.json();
   const { id } = body;
 
   if (!id) {
-    return NextResponse.json(
-      { error: "Record id is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Record id is required" }, { status: 400 });
   }
 
-  // Verify the record exists and belongs to this plate
   const { data: record } = await supabase
     .from("service_records")
     .select("id")
@@ -116,10 +138,7 @@ export async function DELETE(
     .single();
 
   if (!record) {
-    return NextResponse.json(
-      { error: "Record not found for this plate" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Record not found for this plate" }, { status: 404 });
   }
 
   const { error: deleteError } = await supabase
@@ -132,7 +151,6 @@ export async function DELETE(
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
-  // Update car's updated_at
   await supabase
     .from("cars")
     .update({ updated_at: new Date().toISOString() })

@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useToast } from "@/components/Toast";
+import { useAuth } from "@/components/AuthProvider";
+import { authFetch } from "@/lib/api";
 
 export default function AddRecordPage() {
   return (
@@ -17,7 +19,19 @@ function AddRecordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
   const prefillPlate = searchParams.get("plate") || "";
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push(`/login?redirect=${encodeURIComponent("/add" + (prefillPlate ? `?plate=${prefillPlate}` : ""))}`);
+    }
+  }, [authLoading, user, router, prefillPlate]);
+
+  if (authLoading || !user) {
+    return <div className="max-w-2xl mx-auto px-4 py-8 text-center text-gray-500">Checking login...</div>;
+  }
 
   const [step, setStep] = useState<"car" | "record">(prefillPlate ? "record" : "car");
   const [plate, setPlate] = useState(prefillPlate);
@@ -83,7 +97,7 @@ function AddRecordForm() {
     setError("");
     setLoading(true);
 
-    const res = await fetch("/api/cars", {
+    const res = await authFetch("/api/cars", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -122,7 +136,7 @@ function AddRecordForm() {
       setUploading(true);
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await fetch("/api/upload", {
+      const uploadRes = await authFetch("/api/upload", {
         method: "POST",
         body: formData,
       });
@@ -135,7 +149,7 @@ function AddRecordForm() {
     }
 
     const cleanPlate = plate.trim().toUpperCase().replace(/\s+/g, "");
-    const res = await fetch(
+    const res = await authFetch(
       `/api/cars/${encodeURIComponent(cleanPlate)}/records`,
       {
         method: "POST",

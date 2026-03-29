@@ -1,14 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
+
+async function verifyOwnership(req: NextRequest, cleanPlate: string) {
+  const user = await getAuthUser(req);
+  if (!user) return { error: "Unauthorized", status: 401 };
+
+  const { data: car } = await supabase
+    .from("cars")
+    .select("user_id")
+    .eq("plate", cleanPlate)
+    .single();
+
+  if (car?.user_id && car.user_id !== user.id) {
+    return { error: "Forbidden", status: 403 };
+  }
+  return { user };
+}
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ plate: string; id: string }> }
 ) {
   const { plate, id } = await params;
   const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
 
-  // Verify the record exists and belongs to this plate
+  const auth = await verifyOwnership(req, cleanPlate);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   const { data: record } = await supabase
     .from("service_records")
     .select("id")
@@ -33,7 +54,6 @@ export async function DELETE(
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
   }
 
-  // Update car's updated_at
   await supabase
     .from("cars")
     .update({ updated_at: new Date().toISOString() })
@@ -48,6 +68,11 @@ export async function PUT(
 ) {
   const { plate, id } = await params;
   const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
+
+  const auth = await verifyOwnership(req, cleanPlate);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
 
   const { data: record } = await supabase
     .from("service_records")
@@ -77,8 +102,6 @@ export async function PUT(
     notes,
   } = body;
 
-  // Build update object, only including fields that were provided
-  // For COALESCE behavior: only update if value is truthy, otherwise keep existing
   const updateData: Record<string, unknown> = {};
   if (service_date) updateData.service_date = service_date;
   if (service_type) updateData.service_type = service_type;

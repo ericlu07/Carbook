@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 import { v4 as uuid } from "uuid";
 import path from "path";
 
 export async function POST(req: NextRequest) {
+  const user = await getAuthUser(req);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { type ServiceRecord } from "@/lib/types";
+import { authFetch } from "@/lib/api";
 
 interface Props {
   record: ServiceRecord;
@@ -42,7 +43,7 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
       setUploading(true);
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await fetch("/api/upload", {
+      const uploadRes = await authFetch("/api/upload", {
         method: "POST",
         body: formData,
       });
@@ -55,7 +56,7 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
     }
 
     const cleanPlate = plate.toUpperCase().replace(/\s+/g, "");
-    const res = await fetch(
+    const res = await authFetch(
       `/api/cars/${encodeURIComponent(cleanPlate)}/records/${record.id}`,
       {
         method: "PUT",

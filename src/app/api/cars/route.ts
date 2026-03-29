@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q") || "";
@@ -87,6 +88,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getAuthUser(req);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json();
   const { plate, make, model, year, color, vin, owner_name } = body;
 
@@ -101,12 +107,17 @@ export async function POST(req: NextRequest) {
 
   const { data: existing } = await supabase
     .from("cars")
-    .select("plate")
+    .select("plate, user_id")
     .eq("plate", cleanPlate)
     .single();
 
   if (existing) {
-    // Update existing car info
+    // If car has an owner and it's not this user, deny
+    if (existing.user_id && existing.user_id !== user.id) {
+      return NextResponse.json({ error: "This car is owned by another user" }, { status: 403 });
+    }
+
+    // Update existing car info and claim if unclaimed
     const { error } = await supabase
       .from("cars")
       .update({
@@ -116,6 +127,7 @@ export async function POST(req: NextRequest) {
         color: color || null,
         vin: vin || null,
         owner_name: owner_name || null,
+        user_id: user.id,
         updated_at: new Date().toISOString(),
       })
       .eq("plate", cleanPlate);
@@ -132,6 +144,7 @@ export async function POST(req: NextRequest) {
       color: color || null,
       vin: vin || null,
       owner_name: owner_name || null,
+      user_id: user.id,
     });
 
     if (error) {
