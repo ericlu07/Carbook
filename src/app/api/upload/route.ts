@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const ext = path.extname(file.name) || ".bin";
   const filename = `${uuid()}${ext}`;
 
-  // Upload to Supabase Storage
+  // Upload to Supabase Storage (private bucket)
   const { error: uploadError } = await supabase.storage
     .from("invoices")
     .upload(filename, buffer, {
@@ -29,14 +29,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
   }
 
-  // Get the public URL
-  const { data: urlData } = supabase.storage
-    .from("invoices")
-    .getPublicUrl(filename);
-
+  // Store just the storage key as the path (not a public URL since bucket is private)
   return NextResponse.json({
     filename: file.name,
-    path: urlData.publicUrl,
+    path: filename,
     size: file.size,
   });
 }

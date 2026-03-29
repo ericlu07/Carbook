@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import supabase from "@/lib/db";
 import path from "path";
 
-// Legacy route - redirects to Supabase Storage public URL
-// Old uploads used local filesystem; new uploads go directly to Supabase Storage
+// Legacy route - generates a signed URL for files in Supabase Storage
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
@@ -10,9 +10,14 @@ export async function GET(
   const { filename } = await params;
   const safe = path.basename(filename);
 
-  // Redirect to Supabase Storage public URL
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const publicUrl = `${supabaseUrl}/storage/v1/object/public/invoices/${safe}`;
+  // Generate a short-lived signed URL (1 hour)
+  const { data, error } = await supabase.storage
+    .from("invoices")
+    .createSignedUrl(safe, 3600);
 
-  return NextResponse.redirect(publicUrl);
+  if (error || !data) {
+    return NextResponse.json({ error: "File not found" }, { status: 404 });
+  }
+
+  return NextResponse.redirect(data.signedUrl);
 }

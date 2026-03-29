@@ -3,8 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import type { Car, ServiceRecord } from "@/lib/types";
-import CostBreakdown from "@/components/CostBreakdown";
-import ServiceRecommendations from "@/components/ServiceRecommendations";
 import EditRecordModal from "@/components/EditRecordModal";
 import MaintenanceScore from "@/components/MaintenanceScore";
 import { useToast } from "@/components/Toast";
@@ -20,6 +18,7 @@ export default function CarPage() {
   const [copied, setCopied] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingRecord, setEditingRecord] = useState<ServiceRecord | null>(null);
+  const [sharingInvoiceId, setSharingInvoiceId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadData = useCallback(async () => {
@@ -46,6 +45,11 @@ export default function CarPage() {
     loadData();
   }, [loadData]);
 
+  // Sort records by date (newest first) regardless of entry order
+  const sortedRecords = [...records].sort(
+    (a, b) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime()
+  );
+
   const handleDelete = async (recordId: string) => {
     if (!confirm("Are you sure you want to delete this service record?")) return;
     setDeletingId(recordId);
@@ -70,6 +74,25 @@ export default function CarPage() {
       toast("Link copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleShareInvoice = async (recordId: string) => {
+    setSharingInvoiceId(recordId);
+    try {
+      const res = await fetch(`/api/invoice/${recordId}`);
+      if (!res.ok) {
+        toast("Could not generate invoice link");
+        setSharingInvoiceId(null);
+        return;
+      }
+      const data = await res.json();
+      // Copy the temporary link to clipboard
+      await navigator.clipboard.writeText(data.url);
+      toast("Invoice link copied! Expires in 24 hours.");
+    } catch {
+      toast("Failed to generate link");
+    }
+    setSharingInvoiceId(null);
   };
 
   if (loading) {
@@ -103,12 +126,17 @@ export default function CarPage() {
     );
   }
 
-  const totalCost = records.reduce((sum, r) => sum + (r.cost || 0), 0);
-  const latestOdometer = records.find((r) => r.odometer)?.odometer;
-  const earliestOdometer = [...records].reverse().find((r) => r.odometer)?.odometer;
+  const totalCost = sortedRecords.reduce((sum, r) => sum + (r.cost || 0), 0);
+  const latestOdometer = sortedRecords.find((r) => r.odometer)?.odometer;
+  const earliestOdometer = [...sortedRecords].reverse().find((r) => r.odometer)?.odometer;
   const totalKm = latestOdometer && earliestOdometer ? latestOdometer - earliestOdometer : null;
 
-  const lastServiceDate = records.length > 0 ? new Date(records[0].service_date) : null;
+  const lastServiceDate = sortedRecords.length > 0 ? new Date(sortedRecords[0].service_date) : null;
+
+  // Odometer data sorted oldest to newest (left to right)
+  const odoRecords = sortedRecords
+    .filter((r) => r.odometer)
+    .sort((a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime());
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -166,7 +194,7 @@ export default function CarPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
           <div>
             <p className="text-gray-500 dark:text-gray-400 text-sm">Total Records</p>
-            <p className="text-2xl font-bold dark:text-gray-100">{records.length}</p>
+            <p className="text-2xl font-bold dark:text-gray-100">{sortedRecords.length}</p>
           </div>
           <div>
             <p className="text-gray-500 dark:text-gray-400 text-sm">Total Spent</p>
@@ -194,71 +222,55 @@ export default function CarPage() {
       </div>
 
       {/* Maintenance Score */}
-      {records.length >= 2 && (
+      {sortedRecords.length >= 2 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
-          <MaintenanceScore records={records} carYear={car?.year || null} />
+          <MaintenanceScore records={sortedRecords} carYear={car?.year || null} />
         </div>
       )}
 
       {/* Odometer Progress (if we have multiple readings) */}
-      {records.filter((r) => r.odometer).length >= 2 && (
+      {odoRecords.length >= 2 && (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Odometer History</h3>
           <div className="flex items-end gap-1 h-20">
-            {records
-              .filter((r) => r.odometer)
-              .reverse()
-              .map((r) => {
-                const maxOdo = Math.max(...records.filter((x) => x.odometer).map((x) => x.odometer!));
-                const minOdo = Math.min(...records.filter((x) => x.odometer).map((x) => x.odometer!));
-                const range = maxOdo - minOdo || 1;
-                const height = ((r.odometer! - minOdo) / range) * 60 + 20;
-                return (
-                  <div
-                    key={r.id}
-                    className="flex-1 bg-blue-200 dark:bg-blue-800 hover:bg-blue-400 dark:hover:bg-blue-600 rounded-t transition relative group"
-                    style={{ height: `${height}%` }}
-                    title={`${r.odometer!.toLocaleString()} km - ${r.service_date}`}
-                  >
-                    <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                      {r.odometer!.toLocaleString()} km
-                    </div>
+            {odoRecords.map((r) => {
+              const maxOdo = Math.max(...odoRecords.map((x) => x.odometer!));
+              const minOdo = Math.min(...odoRecords.map((x) => x.odometer!));
+              const range = maxOdo - minOdo || 1;
+              const height = ((r.odometer! - minOdo) / range) * 60 + 20;
+              return (
+                <div
+                  key={r.id}
+                  className="flex-1 bg-blue-200 dark:bg-blue-800 hover:bg-blue-400 dark:hover:bg-blue-600 rounded-t transition relative group"
+                  style={{ height: `${height}%` }}
+                  title={`${r.odometer!.toLocaleString()} km - ${r.service_date}`}
+                >
+                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                    {r.odometer!.toLocaleString()} km
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
           </div>
           <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500 mt-1">
-            <span>{records.filter((r) => r.odometer).reverse()[0]?.service_date}</span>
-            <span>{records.filter((r) => r.odometer)[0]?.service_date}</span>
+            <span>{odoRecords[0]?.service_date}</span>
+            <span>{odoRecords[odoRecords.length - 1]?.service_date}</span>
           </div>
         </div>
       )}
 
-      {/* Service Recommendations */}
-      {records.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
-          <ServiceRecommendations records={records} />
-        </div>
-      )}
-
-      {/* Cost Breakdown */}
-      {records.some((r) => r.cost && r.cost > 0) && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
-          <CostBreakdown records={records} />
-        </div>
-      )}
 
       {/* Service Timeline */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold dark:text-gray-100">Service History</h2>
-        {records.length > 0 && lastServiceDate && (
+        {sortedRecords.length > 0 && lastServiceDate && (
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Last service: {lastServiceDate.toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric" })}
           </p>
         )}
       </div>
 
-      {records.length === 0 ? (
+      {sortedRecords.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
           <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">No service records yet</p>
           <a
@@ -270,14 +282,14 @@ export default function CarPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {records.map((record, idx) => (
+          {sortedRecords.map((record, idx) => (
             <div
               key={record.id}
               className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition relative ${
                 deletingId === record.id ? "opacity-50" : ""
               }`}
             >
-              {idx < records.length - 1 && (
+              {idx < sortedRecords.length - 1 && (
                 <div className="absolute left-8 top-full w-0.5 h-4 bg-gray-200 dark:bg-gray-700 z-0"></div>
               )}
 
@@ -307,9 +319,19 @@ export default function CarPage() {
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium px-3 py-1 rounded-full mb-2">
-                        {record.service_type}
-                      </span>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="inline-block bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium px-3 py-1 rounded-full">
+                          {record.service_type}
+                        </span>
+                        {record.invoice_path && (
+                          <span className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold px-2.5 py-1 rounded-full">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Verified
+                          </span>
+                        )}
+                      </div>
                       {record.description && (
                         <p className="text-gray-700 dark:text-gray-300">{record.description}</p>
                       )}
@@ -361,17 +383,16 @@ export default function CarPage() {
                       </span>
                     )}
                     {record.invoice_path && (
-                      <a
-                        href={record.invoice_path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                      <button
+                        onClick={() => handleShareInvoice(record.id)}
+                        disabled={sharingInvoiceId === record.id}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition disabled:opacity-50"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                         </svg>
-                        View Invoice ({record.invoice_filename})
-                      </a>
+                        {sharingInvoiceId === record.id ? "Generating..." : "Share Invoice (24hr link)"}
+                      </button>
                     )}
                   </div>
 
