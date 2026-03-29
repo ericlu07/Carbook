@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SERVICE_TYPES, type ServiceRecord } from "@/lib/types";
+import { type ServiceRecord } from "@/lib/types";
 
 interface Props {
   record: ServiceRecord;
@@ -12,19 +12,47 @@ interface Props {
 
 export default function EditRecordModal({ record, plate, onClose, onSaved }: Props) {
   const [serviceDate, setServiceDate] = useState(record.service_date);
-  const [serviceType, setServiceType] = useState(record.service_type);
   const [description, setDescription] = useState(record.description || "");
   const [provider, setProvider] = useState(record.provider || "");
   const [odometer, setOdometer] = useState(record.odometer?.toString() || "");
   const [cost, setCost] = useState(record.cost?.toString() || "");
-  const [notes, setNotes] = useState(record.notes || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) setFile(droppedFile);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    let invoiceFilename = record.invoice_filename || null;
+    let invoicePath = record.invoice_path || null;
+
+    // Upload file first if a new one was selected
+    if (file) {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        invoiceFilename = uploadData.filename;
+        invoicePath = uploadData.path;
+      }
+      setUploading(false);
+    }
 
     const cleanPlate = plate.toUpperCase().replace(/\s+/g, "");
     const res = await fetch(
@@ -34,12 +62,14 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           service_date: serviceDate,
-          service_type: serviceType,
+          service_type: record.service_type,
           description,
           provider,
           odometer: odometer ? parseInt(odometer) : null,
           cost: cost ? parseFloat(cost) : null,
-          notes,
+          notes: "",
+          invoice_filename: invoiceFilename,
+          invoice_path: invoicePath,
         }),
       }
     );
@@ -54,12 +84,14 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
     onSaved({
       ...record,
       service_date: serviceDate,
-      service_type: serviceType,
+      service_type: record.service_type,
       description,
       provider,
       odometer: odometer ? parseInt(odometer) : null,
       cost: cost ? parseFloat(cost) : null,
-      notes,
+      notes: "",
+      invoice_filename: invoiceFilename,
+      invoice_path: invoicePath,
     });
   };
 
@@ -83,30 +115,14 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
-              <input
-                type="date"
-                value={serviceDate}
-                onChange={(e) => setServiceDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-              <select
-                value={serviceType}
-                onChange={(e) => setServiceType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 dark:text-gray-100 text-sm"
-                required
-              >
-                {SERVICE_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+            <input
+              type="date"
+              value={serviceDate}
+              onChange={(e) => setServiceDate(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+            />
           </div>
 
           <div>
@@ -151,22 +167,60 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Upload Invoice / Receipt
+            </label>
+            <div
+              className={`border-2 border-dashed rounded-lg p-4 text-center transition ${
+                dragging
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
+                  : "border-gray-300 dark:border-gray-600 hover:border-blue-400"
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+            >
+              <input
+                type="file"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.heic"
+                className="hidden"
+                id="edit-file-upload"
+              />
+              <label htmlFor="edit-file-upload" className="cursor-pointer">
+                {file ? (
+                  <div>
+                    <p className="text-blue-600 font-medium text-sm">{file.name}</p>
+                    <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                    <p className="text-xs text-blue-500 mt-1">Click to change</p>
+                  </div>
+                ) : record.invoice_filename ? (
+                  <div>
+                    <p className="text-green-600 font-medium text-sm">Current: {record.invoice_filename}</p>
+                    <p className="text-xs text-gray-500 mt-1">Click or drag to replace</p>
+                  </div>
+                ) : (
+                  <div>
+                    <svg className="w-8 h-8 text-gray-400 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                      {dragging ? "Drop your file here" : "Click or drag & drop to upload"}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">PDF, PNG, JPG up to 10MB</p>
+                  </div>
+                )}
+              </label>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 text-sm"
             >
-              {loading ? "Saving..." : "Save Changes"}
+              {uploading ? "Uploading..." : loading ? "Saving..." : "Save Changes"}
             </button>
             <button
               type="button"
