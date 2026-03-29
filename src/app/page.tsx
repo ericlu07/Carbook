@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { timeAgo } from "@/lib/timeago";
 
 interface CarSummary {
   plate: string;
@@ -19,8 +18,6 @@ export default function HomePage() {
   const [searchResults, setSearchResults] = useState<CarSummary[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [recentCars, setRecentCars] = useState<CarSummary[]>([]);
-  const [stats, setStats] = useState({ total_cars: 0, total_records: 0, total_value: 0 });
   const [suggestions, setSuggestions] = useState<CarSummary[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(-1);
@@ -57,15 +54,6 @@ export default function HomePage() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  useEffect(() => {
-    fetch("/api/stats")
-      .then((r) => r.json())
-      .then((data) => {
-        setRecentCars(data.recentCars || []);
-        setStats(data.stats || { total_cars: 0, total_records: 0, total_value: 0 });
-      })
-      .catch(() => {});
-  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,65 +207,8 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Platform Stats */}
-          {stats.total_cars > 0 && (
-            <div className="flex justify-center gap-8 mt-12 text-blue-100">
-              <div>
-                <p className="text-3xl font-bold text-white">{stats.total_cars}</p>
-                <p className="text-sm">Cars Registered</p>
-              </div>
-              <div className="w-px bg-blue-400/30"></div>
-              <div>
-                <p className="text-3xl font-bold text-white">{stats.total_records}</p>
-                <p className="text-sm">Service Records</p>
-              </div>
-              <div className="w-px bg-blue-400/30"></div>
-              <div>
-                <p className="text-3xl font-bold text-white">
-                  ${Math.round(stats.total_value).toLocaleString()}
-                </p>
-                <p className="text-sm">In Services Tracked</p>
-              </div>
-            </div>
-          )}
         </div>
       </section>
-
-      {/* Recently Added Cars */}
-      {recentCars.length > 0 && (
-        <section className="max-w-5xl mx-auto px-4 py-12">
-          <h2 className="text-2xl font-bold mb-6">Recently Updated</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            {recentCars.map((car) => (
-              <a
-                key={car.plate}
-                href={`/car/${encodeURIComponent(car.plate)}`}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-500 transition group"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="bg-blue-600 text-white px-3 py-1 rounded-lg font-mono font-bold text-sm tracking-wider">
-                    {car.plate}
-                  </span>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
-                    {car.record_count} record{car.record_count !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <p className="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
-                  {car.year} {car.make} {car.model}
-                </p>
-                {car.color && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{car.color}</p>
-                )}
-                {car.last_service_date && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                    Last serviced {timeAgo(car.last_service_date)}
-                  </p>
-                )}
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* How it works */}
       <section className="max-w-5xl mx-auto px-4 py-16">
