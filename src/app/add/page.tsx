@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SERVICE_TYPES } from "@/lib/types";
+
 import { useToast } from "@/components/Toast";
 
 export default function AddRecordPage() {
@@ -38,12 +38,12 @@ function AddRecordForm() {
   const [serviceDate, setServiceDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [serviceType, setServiceType] = useState("");
+
   const [description, setDescription] = useState("");
   const [provider, setProvider] = useState("");
   const [odometer, setOdometer] = useState("");
   const [cost, setCost] = useState("");
-  const [notes, setNotes] = useState("");
+
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -141,13 +141,13 @@ function AddRecordForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          service_date: serviceDate,
-          service_type: serviceType,
+          service_date: serviceDate || new Date().toISOString().split("T")[0],
+          service_type: "General",
           description,
           provider,
           odometer: odometer ? parseInt(odometer) : null,
           cost: cost ? parseFloat(cost) : null,
-          notes,
+          notes: "",
           invoice_filename: invoiceFilename,
           invoice_path: invoicePath,
         }),
@@ -350,37 +350,16 @@ function AddRecordForm() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Service Date *
-              </label>
-              <input
-                type="date"
-                value={serviceDate}
-                onChange={(e) => setServiceDate(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Service Type *
-              </label>
-              <select
-                value={serviceType}
-                onChange={(e) => setServiceType(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100 bg-white"
-                required
-              >
-                <option value="">Select type...</option>
-                {SERVICE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Service Date
+            </label>
+            <input
+              type="date"
+              value={serviceDate}
+              onChange={(e) => setServiceDate(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+            />
           </div>
 
           <div>
@@ -483,19 +462,6 @@ function AddRecordForm() {
                 )}
               </label>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Notes
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any additional notes..."
-              rows={2}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
-            />
           </div>
 
           <button
