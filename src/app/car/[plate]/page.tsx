@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import type { Car, ServiceRecord } from "@/lib/types";
 import EditRecordModal from "@/components/EditRecordModal";
-import MaintenanceScore from "@/components/MaintenanceScore";
 import { useToast } from "@/components/Toast";
 import { timeAgo } from "@/lib/timeago";
 
@@ -221,12 +220,6 @@ export default function CarPage() {
         </div>
       </div>
 
-      {/* Maintenance Score */}
-      {sortedRecords.length >= 2 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mb-6">
-          <MaintenanceScore records={sortedRecords} carYear={car?.year || null} />
-        </div>
-      )}
 
       {/* Odometer Progress (if we have multiple readings) */}
       {odoRecords.length >= 2 && (
