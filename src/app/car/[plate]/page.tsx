@@ -25,10 +25,10 @@ export default function CarPage() {
   const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
   const [transferring, setTransferring] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: string; id?: string } | null>(null);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
 
-  const isOwner = car?.user_id != null && car.user_id === user?.id;
+  const isOwner = (car?.user_id != null && car.user_id === user?.id) || isAdmin;
   const isUnclaimed = car?.user_id == null;
 
   const loadData = useCallback(async () => {

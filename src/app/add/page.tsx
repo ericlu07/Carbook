@@ -22,17 +22,7 @@ function AddRecordForm() {
   const { user, loading: authLoading } = useAuth();
   const prefillPlate = searchParams.get("plate") || "";
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push(`/login?redirect=${encodeURIComponent("/add" + (prefillPlate ? `?plate=${prefillPlate}` : ""))}`);
-    }
-  }, [authLoading, user, router, prefillPlate]);
-
-  if (authLoading || !user) {
-    return <div className="max-w-2xl mx-auto px-4 py-8 text-center text-gray-500">Checking login...</div>;
-  }
-
+  // ALL hooks must be declared before any conditional returns
   const [step, setStep] = useState<"car" | "record">(prefillPlate ? "record" : "car");
   const [plate, setPlate] = useState(prefillPlate);
   const [carExists, setCarExists] = useState(false);
@@ -46,13 +36,11 @@ function AddRecordForm() {
   const [year, setYear] = useState("");
   const [color, setColor] = useState("");
   const [vin, setVin] = useState("");
-  const [ownerName, setOwnerName] = useState("");
 
   // Record fields
   const [serviceDate, setServiceDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-
   const [serviceType, setServiceType] = useState("General");
   const [description, setDescription] = useState("");
   const [provider, setProvider] = useState("");
@@ -63,12 +51,12 @@ function AddRecordForm() {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) setFile(droppedFile);
-  };
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push(`/login?redirect=${encodeURIComponent("/add" + (prefillPlate ? `?plate=${prefillPlate}` : ""))}`);
+    }
+  }, [authLoading, user, router, prefillPlate]);
 
   // Check if car exists when plate changes
   useEffect(() => {
@@ -84,7 +72,6 @@ function AddRecordForm() {
         setYear(data.car.year?.toString() || "");
         setColor(data.car.color || "");
         setVin(data.car.vin || "");
-        setOwnerName(data.car.owner_name || "");
         if (prefillPlate) setStep("record");
       } else {
         setCarExists(false);
@@ -92,6 +79,18 @@ function AddRecordForm() {
     }
     checkCar();
   }, [plate, prefillPlate]);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) setFile(droppedFile);
+  };
+
+  // Show loading while checking auth
+  if (authLoading || !user) {
+    return <div className="max-w-2xl mx-auto px-4 py-8 text-center text-gray-500">Checking login...</div>;
+  }
 
   const handleCarSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

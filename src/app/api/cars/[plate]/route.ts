@@ -21,7 +21,7 @@ export async function DELETE(
     .eq("plate", cleanPlate)
     .single();
 
-  if (!car || car.user_id !== user.id) {
+  if (!car || (car.user_id !== user.id && !user.isAdmin)) {
     return NextResponse.json({ error: "Not authorized to delete this car" }, { status: 403 });
   }
 

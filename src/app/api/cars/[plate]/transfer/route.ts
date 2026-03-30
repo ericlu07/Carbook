@@ -28,7 +28,7 @@ export async function POST(
 
   if (action === "release") {
     // Only the current owner can release
-    if (car.user_id !== user.id) {
+    if (car.user_id !== user.id && !user.isAdmin) {
       return NextResponse.json({ error: "Only the owner can release this car" }, { status: 403 });
     }
 

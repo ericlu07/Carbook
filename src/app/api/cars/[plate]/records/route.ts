@@ -13,7 +13,7 @@ async function verifyOwnership(req: NextRequest, cleanPlate: string) {
     .eq("plate", cleanPlate)
     .single();
 
-  if (car?.user_id && car.user_id !== user.id) {
+  if (car?.user_id && car.user_id !== user.id && !user.isAdmin) {
     return { error: "Forbidden", status: 403 };
   }
   return { user };

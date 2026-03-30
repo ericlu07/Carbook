@@ -4,10 +4,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import type { User, Session } from "@supabase/supabase-js";
 
+const ADMIN_EMAILS = ["ericluuu07@gmail.com"];
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -15,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   loading: true,
+  isAdmin: false,
   signOut: async () => {},
 });
 
@@ -43,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email) : false;
+
   const signOut = async () => {
     await supabaseBrowser.auth.signOut();
     setUser(null);
@@ -50,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   );

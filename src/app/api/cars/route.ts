@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
   if (existing) {
     // If car has an owner and it's not this user, deny
-    if (existing.user_id && existing.user_id !== user.id) {
+    if (existing.user_id && existing.user_id !== user.id && !user.isAdmin) {
       return NextResponse.json({ error: "This car is owned by another user" }, { status: 403 });
     }
 
