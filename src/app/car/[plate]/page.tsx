@@ -25,6 +25,9 @@ export default function CarPage() {
   const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
   const [transferring, setTransferring] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: string; id?: string } | null>(null);
+  const [invoiceVisibility, setInvoiceVisibility] = useState<"public" | "private" | "temp">("private");
+  const [tempAccessUntil, setTempAccessUntil] = useState<string | null>(null);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -51,6 +54,19 @@ export default function CarPage() {
 
     setCar(carData.car);
     setRecords(recData.records);
+    // Set invoice visibility state
+    const c = carData.car;
+    const now = new Date();
+    const tempActive = c.invoices_public_until && new Date(c.invoices_public_until) > now;
+    if (c.invoices_public) {
+      setInvoiceVisibility("public");
+    } else if (tempActive) {
+      setInvoiceVisibility("temp");
+      setTempAccessUntil(c.invoices_public_until);
+    } else {
+      setInvoiceVisibility("private");
+      setTempAccessUntil(null);
+    }
     setLoading(false);
   }, [plate]);
 
@@ -84,6 +100,35 @@ export default function CarPage() {
     toast("Record deleted");
   };
 
+  const handleInvoiceVisibility = async (action: "set_public" | "set_private" | "temp_public") => {
+    setUpdatingVisibility(true);
+    const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
+    const res = await authFetch(`/api/cars/${encodeURIComponent(cleanPlate)}/invoices`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (action === "set_public") {
+        setInvoiceVisibility("public");
+        setTempAccessUntil(null);
+        toast("Invoices are now public");
+      } else if (action === "set_private") {
+        setInvoiceVisibility("private");
+        setTempAccessUntil(null);
+        toast("Invoices are now private");
+      } else if (action === "temp_public") {
+        setInvoiceVisibility("temp");
+        setTempAccessUntil(data.invoices_public_until);
+        toast("Invoices are public for 1 hour");
+      }
+    } else {
+      toast("Failed to update visibility");
+    }
+    setUpdatingVisibility(false);
+  };
+
   const handleDeleteCar = async () => {
     const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
     const res = await authFetch(`/api/cars/${encodeURIComponent(cleanPlate)}`, {
@@ -115,7 +160,11 @@ export default function CarPage() {
     try {
       const res = await fetch(`/api/invoice/${recordId}`);
       if (!res.ok) {
-        toast("Could not load invoice");
+        if (res.status === 403) {
+          toast("Invoices are private. Only the owner can view them.");
+        } else {
+          toast("Could not load invoice");
+        }
         setViewingInvoiceId(null);
         return;
       }
@@ -354,6 +403,67 @@ export default function CarPage() {
             {!isOwner && !isUnclaimed && (
               <span className="text-sm text-gray-500">Owned by another user</span>
             )}
+          </div>
+        )}
+
+        {/* Invoice Visibility Controls - Owner only */}
+        {isOwner && sortedRecords.some((r) => r.invoice_path) && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Invoice Visibility</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {invoiceVisibility === "public"
+                    ? "Anyone can view your invoices"
+                    : invoiceVisibility === "temp"
+                    ? `Public until ${new Date(tempAccessUntil!).toLocaleTimeString("en-NZ", { hour: "2-digit", minute: "2-digit" })}`
+                    : "Only you can view invoices"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {invoiceVisibility === "private" && (
+                  <>
+                    <button
+                      onClick={() => handleInvoiceVisibility("set_public")}
+                      disabled={updatingVisibility}
+                      className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium transition disabled:opacity-50"
+                    >
+                      Make Public
+                    </button>
+                    <button
+                      onClick={() => handleInvoiceVisibility("temp_public")}
+                      disabled={updatingVisibility}
+                      className="text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-medium transition disabled:opacity-50"
+                    >
+                      Public for 1 Hour
+                    </button>
+                  </>
+                )}
+                {invoiceVisibility === "public" && (
+                  <button
+                    onClick={() => handleInvoiceVisibility("set_private")}
+                    disabled={updatingVisibility}
+                    className="text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 px-3 py-1.5 rounded-lg font-medium transition disabled:opacity-50"
+                  >
+                    Make Private
+                  </button>
+                )}
+                {invoiceVisibility === "temp" && (
+                  <>
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium">
+                      Temporarily Public
+                    </span>
+                    <button
+                      onClick={() => handleInvoiceVisibility("set_private")}
+                      disabled={updatingVisibility}
+                      className="text-xs text-gray-500 hover:text-red-600 font-medium transition disabled:opacity-50"
+                    >
+                      Revoke
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

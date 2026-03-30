@@ -9,6 +9,8 @@ export interface Car {
   created_at: string;
   updated_at: string;
   user_id: string | null;
+  invoices_public: boolean;
+  invoices_public_until: string | null;
 }
 
 export interface ServiceRecord {

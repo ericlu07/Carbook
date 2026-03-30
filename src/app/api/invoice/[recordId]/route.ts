@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import supabase from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 
-// Generate a temporary signed URL for an invoice (24 hours)
+// Generate a temporary signed URL for an invoice
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ recordId: string }> }
 ) {
   const { recordId } = await params;
 
-  // Find the record and its invoice path
+  // Find the record and its invoice path + car plate
   const { data: record, error } = await supabase
     .from("service_records")
-    .select("invoice_path, invoice_filename")
+    .select("invoice_path, invoice_filename, plate")
     .eq("id", recordId)
     .single();
 
@@ -22,22 +23,46 @@ export async function GET(
     );
   }
 
-  // Extract the storage filename from the path
-  // invoice_path could be a full Supabase URL or just a storage key
-  let storageKey = record.invoice_path;
+  // Check the car's invoice visibility settings
+  const { data: car } = await supabase
+    .from("cars")
+    .select("user_id, invoices_public, invoices_public_until")
+    .eq("plate", record.plate)
+    .single();
 
-  // If it's a full Supabase URL, extract the filename
+  if (!car) {
+    return NextResponse.json({ error: "Car not found" }, { status: 404 });
+  }
+
+  // Determine if invoices are currently accessible
+  const now = new Date();
+  const tempAccessActive = car.invoices_public_until && new Date(car.invoices_public_until) > now;
+  const invoicesAccessible = car.invoices_public || tempAccessActive;
+
+  // If invoices are private, only the owner or admin can view
+  if (!invoicesAccessible) {
+    const user = await getAuthUser(req);
+    const isOwner = user && (car.user_id === user.id || user.isAdmin);
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: "Invoices are private. Only the owner can view them." },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Extract the storage filename from the path
+  let storageKey = record.invoice_path;
   if (storageKey.includes("/storage/v1/object/public/invoices/")) {
     storageKey = storageKey.split("/storage/v1/object/public/invoices/").pop()!;
   } else if (storageKey.includes("/api/upload/")) {
-    // Legacy local upload path like /api/upload/uuid.pdf
     storageKey = storageKey.split("/api/upload/").pop()!;
   }
 
-  // Generate a signed URL valid for 24 hours (86400 seconds)
+  // Generate a signed URL valid for 1 hour (3600 seconds)
   const { data: signedData, error: signError } = await supabase.storage
     .from("invoices")
-    .createSignedUrl(storageKey, 86400);
+    .createSignedUrl(storageKey, 3600);
 
   if (signError || !signedData) {
     return NextResponse.json(
@@ -49,6 +74,6 @@ export async function GET(
   return NextResponse.json({
     url: signedData.signedUrl,
     filename: record.invoice_filename,
-    expiresIn: "24 hours",
+    expiresIn: "1 hour",
   });
 }
