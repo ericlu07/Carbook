@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import type { Car, ServiceRecord } from "@/lib/types";
 import EditRecordModal from "@/components/EditRecordModal";
+import ConfirmModal from "@/components/ConfirmModal";
 import { useAuth } from "@/components/AuthProvider";
 import { authFetch } from "@/lib/api";
 import { useToast } from "@/components/Toast";
@@ -12,6 +13,7 @@ import { detectPlate } from "@/lib/plates";
 
 export default function CarPage() {
   const params = useParams();
+  const router = useRouter();
   const plate = (params.plate as string) || "";
   const [car, setCar] = useState<Car | null>(null);
   const [records, setRecords] = useState<ServiceRecord[]>([]);
@@ -22,6 +24,7 @@ export default function CarPage() {
   const [editingRecord, setEditingRecord] = useState<ServiceRecord | null>(null);
   const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
   const [transferring, setTransferring] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: string; id?: string } | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -60,7 +63,6 @@ export default function CarPage() {
   );
 
   const handleDelete = async (recordId: string) => {
-    if (!confirm("Are you sure you want to delete this service record?")) return;
     setDeletingId(recordId);
     const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
     await authFetch(`/api/cars/${encodeURIComponent(cleanPlate)}/records`, {
@@ -71,6 +73,20 @@ export default function CarPage() {
     setRecords((prev) => prev.filter((r) => r.id !== recordId));
     setDeletingId(null);
     toast("Record deleted");
+  };
+
+  const handleDeleteCar = async () => {
+    const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
+    const res = await authFetch(`/api/cars/${encodeURIComponent(cleanPlate)}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      toast("Car deleted");
+      router.push("/dashboard");
+    } else {
+      const data = await res.json();
+      toast(data.error || "Failed to delete car");
+    }
   };
 
   const handleShare = async () => {
@@ -103,11 +119,6 @@ export default function CarPage() {
   };
 
   const handleTransfer = async (action: "release" | "claim") => {
-    const msg = action === "release"
-      ? "Release ownership? The next person to claim this car will become the owner."
-      : "Claim this car as yours? You will be able to add and manage service records.";
-    if (!confirm(msg)) return;
-
     setTransferring(true);
     const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
     const res = await authFetch(`/api/cars/${encodeURIComponent(cleanPlate)}/transfer`, {
@@ -302,20 +313,28 @@ export default function CarPage() {
             {isOwner && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-green-600 font-medium">You own this car</span>
-                <button
-                  onClick={() => handleTransfer("release")}
-                  disabled={transferring}
-                  className="text-sm text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
-                >
-                  {transferring ? "..." : "Release Ownership"}
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setConfirmAction({ type: "release" })}
+                    disabled={transferring}
+                    className="text-sm text-gray-500 hover:text-red-600 font-medium disabled:opacity-50"
+                  >
+                    {transferring ? "..." : "Release"}
+                  </button>
+                  <button
+                    onClick={() => setConfirmAction({ type: "delete-car" })}
+                    className="text-sm text-red-500 hover:text-red-700 font-medium"
+                  >
+                    Delete Car
+                  </button>
+                </div>
               </div>
             )}
             {isUnclaimed && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-yellow-600 font-medium">This car has no owner</span>
                 <button
-                  onClick={() => handleTransfer("claim")}
+                  onClick={() => setConfirmAction({ type: "claim" })}
                   disabled={transferring}
                   className="text-sm bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
                 >
@@ -450,7 +469,7 @@ export default function CarPage() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDelete(record.id)}
+                            onClick={() => setConfirmAction({ type: "delete-record", id: record.id })}
                             className="text-gray-400 hover:text-red-500 transition p-1"
                             title="Delete record"
                           >
@@ -512,6 +531,59 @@ export default function CarPage() {
             setEditingRecord(null);
             toast("Record updated");
           }}
+        />
+      )}
+
+      {/* Confirm Modal */}
+      {confirmAction?.type === "delete-record" && (
+        <ConfirmModal
+          title="Delete Record"
+          message="Are you sure you want to delete this service record? This cannot be undone."
+          confirmText="Delete"
+          danger
+          onConfirm={() => {
+            handleDelete(confirmAction.id!);
+            setConfirmAction(null);
+          }}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
+      {confirmAction?.type === "delete-car" && (
+        <ConfirmModal
+          title="Delete Car"
+          message={`This will permanently delete ${car?.plate} and all its service records. This cannot be undone.`}
+          confirmText="Delete Car"
+          danger
+          onConfirm={() => {
+            handleDeleteCar();
+            setConfirmAction(null);
+          }}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
+      {confirmAction?.type === "release" && (
+        <ConfirmModal
+          title="Release Ownership"
+          message="Release ownership of this car? The next person to claim it will become the new owner."
+          confirmText="Release"
+          danger
+          onConfirm={() => {
+            handleTransfer("release");
+            setConfirmAction(null);
+          }}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
+      {confirmAction?.type === "claim" && (
+        <ConfirmModal
+          title="Claim This Car"
+          message="Claim this car as yours? You will be able to add and manage service records."
+          confirmText="Claim"
+          onConfirm={() => {
+            handleTransfer("claim");
+            setConfirmAction(null);
+          }}
+          onCancel={() => setConfirmAction(null)}
         />
       )}
     </div>

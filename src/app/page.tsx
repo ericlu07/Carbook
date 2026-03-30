@@ -14,6 +14,12 @@ interface CarSummary {
   last_service_date?: string;
 }
 
+interface Stats {
+  total_cars: number;
+  total_records: number;
+  total_value: number;
+}
+
 export default function HomePage() {
   const [plate, setPlate] = useState("");
   const [searchResults, setSearchResults] = useState<CarSummary[]>([]);
@@ -22,9 +28,22 @@ export default function HomePage() {
   const [suggestions, setSuggestions] = useState<CarSummary[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(-1);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [recentCars, setRecentCars] = useState<CarSummary[]>([]);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>(null);
   const router = useRouter();
+
+  // Fetch stats on mount
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then((data) => {
+        setStats(data.stats);
+        setRecentCars(data.recentCars || []);
+      })
+      .catch(() => {});
+  }, []);
 
   // Live search suggestions with debounce
   const fetchSuggestions = useCallback((query: string) => {
@@ -252,8 +271,67 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Live Stats */}
+      {stats && (
+        <section className="bg-white py-12 border-y border-gray-100">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="grid grid-cols-3 gap-6 text-center">
+              <div>
+                <p className="text-3xl sm:text-4xl font-bold text-blue-600">{stats.total_cars.toLocaleString()}</p>
+                <p className="text-sm text-gray-500 mt-1">Cars Registered</p>
+              </div>
+              <div>
+                <p className="text-3xl sm:text-4xl font-bold text-blue-600">{stats.total_records.toLocaleString()}</p>
+                <p className="text-sm text-gray-500 mt-1">Service Records</p>
+              </div>
+              <div>
+                <p className="text-3xl sm:text-4xl font-bold text-blue-600">${(stats.total_value / 1000).toFixed(0)}k+</p>
+                <p className="text-sm text-gray-500 mt-1">Tracked Spend</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Recently Added Cars */}
+      {recentCars.length > 0 && (
+        <section className="max-w-5xl mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">Recently Added</h2>
+            <a href="/browse" className="text-blue-600 hover:text-blue-800 text-sm font-medium transition">
+              View all &rarr;
+            </a>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentCars.slice(0, 6).map((car) => {
+              const plateInfo = detectPlate(car.plate);
+              return (
+                <a
+                  key={car.plate}
+                  href={`/car/${encodeURIComponent(car.plate)}`}
+                  className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-lg hover:border-blue-300 transition group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="bg-blue-600 text-white px-3 py-1 rounded-lg font-mono font-bold text-sm tracking-wider">
+                      {plateInfo.flag && <span className="mr-1">{plateInfo.flag}</span>}
+                      {car.plate}
+                    </span>
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                      {car.record_count} record{car.record_count !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-gray-800 group-hover:text-blue-600 transition">
+                    {car.year} {car.make} {car.model}
+                  </p>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Benefits */}
-      <section className="bg-white py-16 transition-colors">
+      <section className="bg-white py-16">
         <div className="max-w-5xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">
             Why Use CarBook?
