@@ -64,19 +64,19 @@ function LoginForm() {
           <img src="/favicon.svg" alt="CarBook" width={32} height={32} className="rounded-md" />
           CarBook
         </a>
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-gray-500">
           {mode === "login" ? "Log in to manage your cars" : "Create an account to get started"}
         </p>
       </div>
 
       {/* Mode toggle */}
-      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6">
+      <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
         <button
           onClick={() => { setMode("login"); setError(""); }}
           className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
             mode === "login"
-              ? "bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-gray-100"
-              : "text-gray-500 dark:text-gray-400"
+              ? "bg-white shadow text-gray-900"
+              : "text-gray-500"
           }`}
         >
           Log in
@@ -85,8 +85,8 @@ function LoginForm() {
           onClick={() => { setMode("signup"); setError(""); }}
           className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
             mode === "signup"
-              ? "bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-gray-100"
-              : "text-gray-500 dark:text-gray-400"
+              ? "bg-white shadow text-gray-900"
+              : "text-gray-500"
           }`}
         >
           Sign up
@@ -94,37 +94,37 @@ function LoginForm() {
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl mb-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-xl mb-4 text-sm">
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm">
           {success}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             required
             minLength={6}
           />
@@ -138,7 +138,34 @@ function LoginForm() {
         </button>
       </form>
 
-      <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
+      {mode === "login" && (
+        <p className="text-center text-sm mt-4">
+          <button
+            onClick={async () => {
+              if (!email) {
+                setError("Enter your email address first, then click forgot password.");
+                return;
+              }
+              setLoading(true);
+              setError("");
+              const { error: resetError } = await supabaseBrowser.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
+              });
+              setLoading(false);
+              if (resetError) {
+                setError(resetError.message);
+              } else {
+                setSuccess("Password reset email sent! Check your inbox.");
+              }
+            }}
+            className="text-blue-600 font-medium hover:underline"
+          >
+            Forgot password?
+          </button>
+        </p>
+      )}
+
+      <p className="text-center text-sm text-gray-500 mt-4">
         {mode === "login" ? (
           <>
             Don&apos;t have an account?{" "}

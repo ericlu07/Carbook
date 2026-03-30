@@ -13,6 +13,7 @@ interface Props {
 
 export default function EditRecordModal({ record, plate, onClose, onSaved }: Props) {
   const [serviceDate, setServiceDate] = useState(record.service_date);
+  const [serviceType, setServiceType] = useState(record.service_type || "General");
   const [description, setDescription] = useState(record.description || "");
   const [provider, setProvider] = useState(record.provider || "");
   const [odometer, setOdometer] = useState(record.odometer?.toString() || "");
@@ -63,7 +64,7 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           service_date: serviceDate,
-          service_type: record.service_type,
+          service_type: serviceType,
           description,
           provider,
           odometer: odometer ? parseInt(odometer) : null,
@@ -85,7 +86,7 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
     onSaved({
       ...record,
       service_date: serviceDate,
-      service_type: record.service_type,
+      service_type: serviceType,
       description,
       provider,
       odometer: odometer ? parseInt(odometer) : null,
@@ -98,12 +99,12 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-lg font-bold dark:text-gray-100">Edit Service Record</h2>
+      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-gray-200">
+          <h2 className="text-lg font-bold">Edit Service Record</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition text-2xl leading-none"
+            className="text-gray-400 hover:text-gray-600 transition text-2xl leading-none"
           >
             &times;
           </button>
@@ -111,71 +112,96 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-3 py-2 rounded-lg text-sm">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
             <input
               type="date"
               value={serviceDate}
               onChange={(e) => setServiceDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
+            <select
+              value={serviceType}
+              onChange={(e) => setServiceType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            >
+              <option value="General">General Service</option>
+              <option value="Oil Change">Oil Change</option>
+              <option value="Brake Service">Brake Service</option>
+              <option value="Tire Replacement">Tire Replacement</option>
+              <option value="WOF/Inspection">WOF / Inspection</option>
+              <option value="Registration">Registration / Rego</option>
+              <option value="Transmission">Transmission</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Suspension">Suspension</option>
+              <option value="Engine">Engine</option>
+              <option value="Body Work">Body Work / Paint</option>
+              <option value="AC/Heating">AC / Heating</option>
+              <option value="Exhaust">Exhaust</option>
+              <option value="Timing Belt">Timing Belt / Chain</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Provider</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
               <input
                 type="text"
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Odometer</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Odometer</label>
               <input
                 type="number"
                 value={odometer}
                 onChange={(e) => setOdometer(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cost ($)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cost ($)</label>
               <input
                 type="number"
                 step="0.01"
                 value={cost}
                 onChange={(e) => setCost(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Upload Invoice / Receipt
             </label>
             <div
               className={`border-2 border-dashed rounded-lg p-4 text-center transition ${
                 dragging
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
-                  : "border-gray-300 dark:border-gray-600 hover:border-blue-400"
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 hover:border-blue-400"
               }`}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
@@ -205,7 +231,7 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
                     <svg className="w-8 h-8 text-gray-400 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    <p className="text-gray-600 text-sm">
                       {dragging ? "Drop your file here" : "Click or drag & drop to upload"}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">PDF, PNG, JPG up to 10MB</p>
@@ -226,7 +252,7 @@ export default function EditRecordModal({ record, plate, onClose, onSaved }: Pro
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300 transition text-sm"
+              className="px-5 py-2.5 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition text-sm"
             >
               Cancel
             </button>

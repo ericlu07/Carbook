@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.force-dark *));
+
+:root {
+  color-scheme: light;
+}
+
 @keyframes slide-in {
   from {
     transform: translateX(100%);

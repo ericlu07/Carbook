@@ -36,7 +36,7 @@ export default function RootLayout({
                   <img src="/favicon.svg" alt="CarBook logo" width={32} height={32} className="w-7 h-7 sm:w-8 sm:h-8 rounded-md" />
                   CarBook
                 </a>
-                <div className="flex items-center gap-1.5 sm:gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <NavAddButton />
                   <AuthButton />
                 </div>
@@ -44,9 +44,22 @@ export default function RootLayout({
             </nav>
             <main>{children}</main>
             <footer className="border-t border-gray-200 bg-white mt-16">
-              <div className="max-w-6xl mx-auto px-4 py-8 text-center text-gray-500 text-sm">
-                <p>CarBook &mdash; Your vehicle&apos;s service history, always accessible.</p>
-                <p className="mt-1">Look up any car by its plate number. Free and public.</p>
+              <div className="max-w-6xl mx-auto px-4 py-10">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/favicon.svg" alt="CarBook" width={24} height={24} className="rounded" />
+                    <span className="font-semibold text-gray-700">CarBook</span>
+                  </div>
+                  <nav className="flex items-center gap-6 text-sm">
+                    <a href="/" className="text-gray-500 hover:text-blue-600 transition">Search</a>
+                    <a href="/add" className="text-gray-500 hover:text-blue-600 transition">Add Record</a>
+                    <a href="/login" className="text-gray-500 hover:text-blue-600 transition">Log in</a>
+                  </nav>
+                </div>
+                <div className="mt-6 pt-6 border-t border-gray-100 text-center text-gray-400 text-xs">
+                  <p>&copy; {new Date().getFullYear()} CarBook &mdash; Vehicle service history for Australia &amp; New Zealand.</p>
+                </div>
               </div>
             </footer>
           </ToastProvider>

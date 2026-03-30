@@ -53,6 +53,7 @@ function AddRecordForm() {
     new Date().toISOString().split("T")[0]
   );
 
+  const [serviceType, setServiceType] = useState("General");
   const [description, setDescription] = useState("");
   const [provider, setProvider] = useState("");
   const [odometer, setOdometer] = useState("");
@@ -156,7 +157,7 @@ function AddRecordForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           service_date: serviceDate || new Date().toISOString().split("T")[0],
-          service_type: "General",
+          service_type: serviceType,
           description,
           provider,
           odometer: odometer ? parseInt(odometer) : null,
@@ -190,7 +191,7 @@ function AddRecordForm() {
         <h1 className="text-3xl font-bold text-green-600 mb-2">
           Record Added!
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">Redirecting to service history...</p>
+        <p className="text-gray-600">Redirecting to service history...</p>
       </div>
     );
   }
@@ -198,7 +199,7 @@ function AddRecordForm() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-2">Add Service Record</h1>
-      <p className="text-gray-600 dark:text-gray-400 mb-8">
+      <p className="text-gray-600 mb-8">
         {step === "car"
           ? "First, tell us about the car."
           : "Now add the service details."}
@@ -215,12 +216,12 @@ function AddRecordForm() {
         >
           {carExists ? "✓" : "1"} Vehicle Info
         </div>
-        <div className="w-8 h-0.5 bg-gray-300 dark:bg-gray-600"></div>
+        <div className="w-8 h-0.5 bg-gray-300"></div>
         <div
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
             step === "record"
               ? "bg-blue-600 text-white"
-              : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+              : "bg-gray-100 text-gray-500"
           }`}
         >
           2 Service Details
@@ -228,7 +229,7 @@ function AddRecordForm() {
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl mb-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6">
           {error}
         </div>
       )}
@@ -236,7 +237,7 @@ function AddRecordForm() {
       {step === "car" && (
         <form onSubmit={handleCarSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Plate Number *
             </label>
             <input
@@ -244,7 +245,7 @@ function AddRecordForm() {
               value={plate}
               onChange={(e) => setPlate(e.target.value.toUpperCase())}
               placeholder="e.g. ABC123"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100 text-lg font-mono"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-mono"
               required
             />
             {carExists && (
@@ -256,7 +257,7 @@ function AddRecordForm() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Make *
               </label>
               <input
@@ -264,12 +265,12 @@ function AddRecordForm() {
                 value={make}
                 onChange={(e) => setMake(e.target.value)}
                 placeholder="e.g. Toyota"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Model *
               </label>
               <input
@@ -277,7 +278,7 @@ function AddRecordForm() {
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 placeholder="e.g. Camry"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
             </div>
@@ -285,7 +286,7 @@ function AddRecordForm() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Year
               </label>
               <input
@@ -295,11 +296,11 @@ function AddRecordForm() {
                 placeholder="2020"
                 min="1900"
                 max="2030"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Color
               </label>
               <input
@@ -307,13 +308,13 @@ function AddRecordForm() {
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
                 placeholder="Silver"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               VIN (optional)
             </label>
             <input
@@ -321,7 +322,7 @@ function AddRecordForm() {
               value={vin}
               onChange={(e) => setVin(e.target.value)}
               placeholder="Vehicle Identification Number"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100 font-mono text-sm"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
             />
           </div>
 
@@ -337,7 +338,7 @@ function AddRecordForm() {
               <button
                 type="button"
                 onClick={() => setStep("record")}
-                className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition dark:text-gray-200"
+                className="px-6 py-3 border border-gray-300 rounded-xl font-semibold hover:bg-gray-50 transition"
               >
                 Skip →
               </button>
@@ -348,7 +349,7 @@ function AddRecordForm() {
 
       {step === "record" && (
         <form onSubmit={handleRecordSubmit} className="space-y-5">
-          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex items-center justify-between">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
             <div>
               <p className="text-sm text-blue-600">Adding record for</p>
               <p className="font-bold font-mono text-lg">{plate}</p>
@@ -365,19 +366,46 @@ function AddRecordForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Service Date
             </label>
             <input
               type="date"
               value={serviceDate}
               onChange={(e) => setServiceDate(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Service Type
+            </label>
+            <select
+              value={serviceType}
+              onChange={(e) => setServiceType(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="General">General Service</option>
+              <option value="Oil Change">Oil Change</option>
+              <option value="Brake Service">Brake Service</option>
+              <option value="Tire Replacement">Tire Replacement</option>
+              <option value="WOF/Inspection">WOF / Inspection</option>
+              <option value="Registration">Registration / Rego</option>
+              <option value="Transmission">Transmission</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Suspension">Suspension</option>
+              <option value="Engine">Engine</option>
+              <option value="Body Work">Body Work / Paint</option>
+              <option value="AC/Heating">AC / Heating</option>
+              <option value="Exhaust">Exhaust</option>
+              <option value="Timing Belt">Timing Belt / Chain</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Description
             </label>
             <textarea
@@ -385,13 +413,13 @@ function AddRecordForm() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What was done? e.g. Replaced front brake pads and rotors"
               rows={3}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Workshop/Provider
               </label>
               <input
@@ -399,11 +427,11 @@ function AddRecordForm() {
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
                 placeholder="e.g. Tony's Auto"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Odometer (km)
               </label>
               <input
@@ -411,11 +439,11 @@ function AddRecordForm() {
                 value={odometer}
                 onChange={(e) => setOdometer(e.target.value)}
                 placeholder="125000"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Cost ($)
               </label>
               <input
@@ -424,20 +452,20 @@ function AddRecordForm() {
                 value={cost}
                 onChange={(e) => setCost(e.target.value)}
                 placeholder="150.00"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Upload Invoice / Receipt
             </label>
             <div
               className={`border-2 border-dashed rounded-xl p-6 text-center transition ${
                 dragging
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30"
-                  : "border-gray-300 dark:border-gray-600 hover:border-blue-400"
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 hover:border-blue-400"
               }`}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}

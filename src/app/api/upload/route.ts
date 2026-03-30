@@ -17,11 +17,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
+  // Validate file size (max 10MB)
+  const MAX_SIZE = 10 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    return NextResponse.json({ error: "File too large. Maximum size is 10MB." }, { status: 400 });
+  }
+
+  // Validate file type
+  const ALLOWED_TYPES = [
+    "application/pdf",
+    "image/png", "image/jpeg", "image/gif", "image/webp", "image/heic",
+  ];
+  const ext = path.extname(file.name).toLowerCase();
+  const ALLOWED_EXTS = [".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".heic"];
+  if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.includes(ext)) {
+    return NextResponse.json({ error: "Invalid file type. Allowed: PDF, PNG, JPG, GIF, WebP, HEIC." }, { status: 400 });
+  }
+
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  const ext = path.extname(file.name) || ".bin";
-  const filename = `${uuid()}${ext}`;
+  const safeExt = path.extname(file.name).toLowerCase() || ".bin";
+  const filename = `${uuid()}${safeExt}`;
 
   // Upload to Supabase Storage (private bucket)
   const { error: uploadError } = await supabase.storage

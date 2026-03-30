@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { detectPlate } from "@/lib/plates";
 
 interface CarSummary {
   plate: string;
@@ -81,7 +82,11 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white overflow-visible relative z-10">
         <div className="max-w-4xl mx-auto px-4 py-12 sm:py-20 text-center">
-          <p className="text-sm text-blue-200 italic mb-6 tracking-wide">The only <span className="font-semibold text-white">ONE</span> service history <span className="font-semibold text-white">BOOK</span> you will ever need</p>
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <span className="text-lg">🇳🇿</span>
+            <span className="text-lg">🇦🇺</span>
+            <p className="text-sm text-blue-200 italic tracking-wide">The only <span className="font-semibold text-white">ONE</span> service history <span className="font-semibold text-white">BOOK</span> you will ever need</p>
+          </div>
           <h1 className="text-3xl sm:text-5xl font-bold mb-4">
             Your Car&apos;s Service History,
             <br />
@@ -156,7 +161,7 @@ export default function HomePage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="bg-blue-600 text-white px-2 py-0.5 rounded font-mono font-bold text-sm">
-                        {car.plate}
+                        {detectPlate(car.plate).flag} {car.plate}
                       </span>
                       <span className="text-gray-800 font-medium">
                         {car.year} {car.make} {car.model}
@@ -172,7 +177,7 @@ export default function HomePage() {
           </div>
 
           {searched && searchResults.length === 0 && (
-            <div className="mt-6 bg-white/10 dark:bg-black/20 backdrop-blur rounded-xl p-6 max-w-lg mx-auto">
+            <div className="mt-6 bg-white/10 backdrop-blur rounded-xl p-6 max-w-lg mx-auto">
               <p className="text-blue-100">
                 No car found for &quot;{plate.trim().toUpperCase()}&quot;. Try searching by plate number or VIN.
               </p>
@@ -191,7 +196,7 @@ export default function HomePage() {
                 <a
                   key={car.plate}
                   href={`/car/${encodeURIComponent(car.plate)}`}
-                  className="flex items-center justify-between bg-white/10 dark:bg-white/5 backdrop-blur rounded-xl p-4 mb-2 hover:bg-white/20 dark:hover:bg-white/10 transition"
+                  className="flex items-center justify-between bg-white/10 backdrop-blur rounded-xl p-4 mb-2 hover:bg-white/20 transition"
                 >
                   <div className="text-left">
                     <span className="font-bold text-lg">{car.plate}</span>
@@ -248,9 +253,9 @@ export default function HomePage() {
       </section>
 
       {/* Benefits */}
-      <section className="bg-white dark:bg-gray-800 py-16 transition-colors">
+      <section className="bg-white py-16 transition-colors">
         <div className="max-w-5xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12 dark:text-white">
+          <h2 className="text-3xl font-bold text-center mb-12">
             Why Use CarBook?
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
@@ -278,12 +283,12 @@ export default function HomePage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="flex gap-4 p-6 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-500 hover:shadow-md transition"
+                className="flex gap-4 p-6 rounded-xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition"
               >
                 <span className="text-3xl">{item.icon}</span>
                 <div>
                   <h3 className="font-semibold text-lg mb-1">{item.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-400">{item.desc}</p>
+                  <p className="text-gray-600">{item.desc}</p>
                 </div>
               </div>
             ))}
