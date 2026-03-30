@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     description: "Look up any car's complete service history by plate number. Free and public.",
     type: "website",
   },
-  keywords: ["car service history", "vehicle maintenance", "car invoice tracker", "service records", "car buyer"],
+  keywords: ["car service history", "vehicle maintenance", "car invoice tracker", "service records", "car buyer", "NZ car history", "Australia vehicle records", "WOF history", "used car check"],
   icons: { icon: "/favicon.svg" },
 };
 
@@ -37,6 +37,9 @@ export default function RootLayout({
                   CarBook
                 </a>
                 <div className="flex items-center gap-2 sm:gap-3">
+                  <a href="/browse" className="text-gray-500 hover:text-blue-600 transition text-sm font-medium hidden sm:block">
+                    Browse
+                  </a>
                   <NavAddButton />
                   <AuthButton />
                 </div>
@@ -53,6 +56,7 @@ export default function RootLayout({
                   </div>
                   <nav className="flex items-center gap-6 text-sm">
                     <a href="/" className="text-gray-500 hover:text-blue-600 transition">Search</a>
+                    <a href="/browse" className="text-gray-500 hover:text-blue-600 transition">Browse</a>
                     <a href="/add" className="text-gray-500 hover:text-blue-600 transition">Add Record</a>
                     <a href="/login" className="text-gray-500 hover:text-blue-600 transition">Log in</a>
                   </nav>

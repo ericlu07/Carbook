@@ -58,6 +58,15 @@ export default function CarPage() {
     loadData();
   }, [loadData]);
 
+  // Dynamic page title
+  useEffect(() => {
+    if (car) {
+      document.title = `${car.plate} - ${car.year} ${car.make} ${car.model} | CarBook`;
+    } else if (notFound) {
+      document.title = `Car Not Found | CarBook`;
+    }
+  }, [car, notFound]);
+
   const sortedRecords = [...records].sort(
     (a, b) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime()
   );
