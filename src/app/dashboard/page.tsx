@@ -102,17 +102,13 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-mono font-bold text-lg tracking-wider group-hover:bg-blue-700 transition">
+                      {plateInfo.flag && <span className="mr-1">{plateInfo.flag}</span>}
                       {car.plate}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">
-                          {car.year} {car.make} {car.model}
-                        </p>
-                        {plateInfo.flag && (
-                          <span className="text-sm" title={plateInfo.label}>{plateInfo.flag}</span>
-                        )}
-                      </div>
+                      <p className="font-semibold text-gray-900">
+                        {car.year} {car.make} {car.model}
+                      </p>
                       <div className="flex items-center gap-3 text-sm text-gray-500 mt-0.5">
                         <span>{car.record_count} record{car.record_count !== 1 ? "s" : ""}</span>
                         {car.color && <span>{car.color}</span>}
@@ -122,9 +118,18 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                  <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`/add?plate=${encodeURIComponent(car.plate)}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs text-blue-600 hover:text-blue-800 font-medium bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition"
+                    >
+                      + Record
+                    </a>
+                    <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
               </a>
             );
