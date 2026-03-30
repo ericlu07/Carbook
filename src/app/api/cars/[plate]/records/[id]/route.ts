@@ -107,8 +107,8 @@ export async function PUT(
   if (service_type) updateData.service_type = service_type;
   if (description !== undefined) updateData.description = description ?? null;
   if (provider !== undefined) updateData.provider = provider ?? null;
-  if (odometer !== undefined) updateData.odometer = odometer || null;
-  if (cost !== undefined) updateData.cost = cost || null;
+  if (odometer !== undefined) updateData.odometer = odometer != null ? odometer : null;
+  if (cost !== undefined) updateData.cost = cost != null ? cost : null;
   if (invoice_filename) updateData.invoice_filename = invoice_filename;
   if (invoice_path) updateData.invoice_path = invoice_path;
   if (notes !== undefined) updateData.notes = notes ?? null;

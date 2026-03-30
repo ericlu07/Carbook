@@ -26,7 +26,7 @@ export async function DELETE(
   }
 
   // Delete all records first
-  await supabase.from("service_records").delete().eq("car_plate", cleanPlate);
+  await supabase.from("service_records").delete().eq("plate", cleanPlate);
 
   // Delete the car
   const { error } = await supabase.from("cars").delete().eq("plate", cleanPlate);

@@ -7,10 +7,12 @@ export async function GET(req: NextRequest) {
   const all = req.nextUrl.searchParams.get("all") === "1";
 
   if (q) {
+    // Sanitize query to prevent PostgREST filter injection
+    const safeQ = q.replace(/[%_(),.\\]/g, "");
     const { data: cars, error } = await supabase
       .from("cars")
       .select("*")
-      .or(`plate.ilike.%${q}%,vin.ilike.%${q}%`)
+      .or(`plate.ilike.%${safeQ}%,vin.ilike.%${safeQ}%`)
       .order("updated_at", { ascending: false })
       .limit(20);
 

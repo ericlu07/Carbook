@@ -90,14 +90,19 @@ export default function CarPage() {
   const handleDelete = async (recordId: string) => {
     setDeletingId(recordId);
     const cleanPlate = decodeURIComponent(plate).toUpperCase().replace(/\s+/g, "");
-    await authFetch(`/api/cars/${encodeURIComponent(cleanPlate)}/records`, {
+    const res = await authFetch(`/api/cars/${encodeURIComponent(cleanPlate)}/records`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: recordId }),
     });
-    setRecords((prev) => prev.filter((r) => r.id !== recordId));
+    if (res.ok) {
+      setRecords((prev) => prev.filter((r) => r.id !== recordId));
+      toast("Record deleted");
+    } else {
+      const data = await res.json();
+      toast(data.error || "Failed to delete record");
+    }
     setDeletingId(null);
-    toast("Record deleted");
   };
 
   const handleInvoiceVisibility = async (action: "set_public" | "set_private" | "temp_public") => {
@@ -158,7 +163,7 @@ export default function CarPage() {
   const handleViewInvoice = async (recordId: string) => {
     setViewingInvoiceId(recordId);
     try {
-      const res = await fetch(`/api/invoice/${recordId}`);
+      const res = await authFetch(`/api/invoice/${recordId}`);
       if (!res.ok) {
         if (res.status === 403) {
           toast("Invoices are private. Only the owner can view them.");
@@ -388,7 +393,7 @@ export default function CarPage() {
                 </div>
               </div>
             )}
-            {isUnclaimed && (
+            {isUnclaimed && !isOwner && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-yellow-600 font-medium">This car has no owner</span>
                 <button
